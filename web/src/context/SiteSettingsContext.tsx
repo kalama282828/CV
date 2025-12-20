@@ -282,10 +282,17 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const loadFromDatabase = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading settings from Supabase...');
       const { data, error } = await siteSettingsService.getSettings();
+      console.log('📦 Supabase response:', { data, error });
       if (!error && data) {
         const converted = dbToFrontend(data as unknown as Record<string, unknown>);
+        console.log('✅ Converted settings:', converted);
         setSettings(prev => ({ ...prev, ...converted }));
+      } else if (error) {
+        console.error('❌ Supabase error:', error);
+      } else {
+        console.warn('⚠️ No data returned from Supabase - using defaults');
       }
     } catch (err) {
       console.error('Failed to load settings from database:', err);
@@ -317,13 +324,16 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
   const saveToDatabase = useCallback(async () => {
     const dbData = frontendToDb(settings);
-    const { error } = await siteSettingsService.updateSettings(
+    console.log('💾 Saving to Supabase:', dbData);
+    const { data, error } = await siteSettingsService.updateSettings(
       dbData as Parameters<typeof siteSettingsService.updateSettings>[0]
     );
+    console.log('📦 Save response:', { data, error });
     if (error) {
       console.error('Failed to save settings to database:', error);
       throw error;
     }
+    console.log('✅ Settings saved successfully');
     // Kaydetme başarılı - state zaten güncel
   }, [settings]);
 
