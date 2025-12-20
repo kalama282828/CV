@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { siteSettingsService } from '../lib/database';
 
@@ -19,14 +19,12 @@ export interface SiteSettings {
   };
   footerText: string;
   maintenanceMode: boolean;
-  // Landing page content
   heroTitle: string;
   heroSubtitle: string;
   heroImage: string;
   heroButtonText: string;
   heroSecondaryButtonText: string;
   heroTrustText: string;
-  // Features section
   featuresTitle: string;
   featuresSubtitle: string;
   feature1Title: string;
@@ -35,7 +33,6 @@ export interface SiteSettings {
   feature2Description: string;
   feature3Title: string;
   feature3Description: string;
-  // How it works section
   howItWorksTitle: string;
   howItWorksSubtitle: string;
   step1Title: string;
@@ -44,26 +41,21 @@ export interface SiteSettings {
   step2Description: string;
   step3Title: string;
   step3Description: string;
-  // Testimonials section
   testimonialsTitle: string;
   testimonialsSubtitle: string;
-  // CTA section
   ctaTitle: string;
   ctaSubtitle: string;
   ctaButtonText: string;
-  // Navigation
   navFeatures: string;
   navPricing: string;
   navAbout: string;
   navLogin: string;
   navGetStarted: string;
-  // Pricing
   oneTimePrice: number;
   proMonthlyPrice: number;
   proYearlyPrice: number;
   businessMonthlyPrice: number;
   businessYearlyPrice: number;
-  // Footer Links
   footerProductTitle: string;
   footerProductLink1Text: string;
   footerProductLink1Url: string;
@@ -89,28 +81,23 @@ const defaultSettings: SiteSettings = {
   secondaryColor: '#1e3a5f',
   contactEmail: 'info@cvbuilder.com',
   contactPhone: '+90 212 123 4567',
-  socialLinks: {
-    facebook: 'https://facebook.com/cvbuilder',
-    twitter: 'https://twitter.com/cvbuilder',
-    instagram: 'https://instagram.com/cvbuilder',
-    linkedin: 'https://linkedin.com/company/cvbuilder',
-  },
+  socialLinks: {},
   footerText: '© 2024 CV Builder. Tüm hakları saklıdır.',
   maintenanceMode: false,
   heroTitle: 'Dakikalar İçinde İş Kazandıran CV Oluşturun',
-  heroSubtitle: 'ATS uyumlu CV oluşturucumuzla hayalinizdeki işe ulaşan binlerce profesyonele katılın. Tasarım becerisi gerekmez.',
-  heroImage: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAeiKmpNkTOPzGns2h7uj92K5YM3lx4iaGHEWN0q9uKyjNCj55t_jYzLKaFF4nXPSCWW4-2_ywWTJZz9ebK5BX8l50jjztvIsRNhrVGVGY5Js3pYGiXIa40_hbu770-GETfefWPsvgX7hA30KqOLvNlt5hxTjp609lgj3SL6rQ17kyLwFoRqD7ElPqG2j_efWYfqZ4L4wwnaHzaSZaqsqXSsGMobexMlLqLzU7SccgNC46OIifBPmQlaQjTjx5cf7Ze1XxZ2HVFxx60',
+  heroSubtitle: 'ATS uyumlu CV oluşturucumuzla hayalinizdeki işe ulaşan binlerce profesyonele katılın.',
+  heroImage: '',
   heroButtonText: 'CV Oluştur',
   heroSecondaryButtonText: 'Örnekleri Gör',
   heroTrustText: '10.000+ iş arayan tarafından güveniliyor',
   featuresTitle: 'Neden Bizi Seçmelisiniz?',
   featuresSubtitle: 'Araçlarımız, akıllı özelliklerle daha hızlı işe girmenize yardımcı olmak için tasarlandı.',
   feature1Title: 'ATS Uyumlu',
-  feature1Description: 'Büyük işverenler tarafından kullanılan Başvuru Takip Sistemlerini geçmek için özel olarak tasarlanmış ve test edilmiş şablonlar.',
+  feature1Description: 'Büyük işverenler tarafından kullanılan Başvuru Takip Sistemlerini geçmek için özel olarak tasarlanmış şablonlar.',
   feature2Title: 'Akıllı Öneriler',
   feature2Description: 'Deneyiminizi yazarken, iş unvanınıza özel uzman tavsiyeleri ve hazır ifadeler alın.',
   feature3Title: 'Anında Dışa Aktarma',
-  feature3Description: 'Tamamlanmış CV\'nizi tek tıklamayla PDF veya Word formatında indirin, başvuruya hazır.',
+  feature3Description: 'Tamamlanmış CV\'nizi tek tıklamayla PDF veya Word formatında indirin.',
   howItWorksTitle: '3 Basit Adımda CV\'nizi Oluşturun',
   howItWorksSubtitle: 'Saatlerce formatlama ile uğraşmayın. Deneyiminize odaklanın, tasarımı bize bırakın.',
   step1Title: 'Yükle veya Sıfırdan Başla',
@@ -150,12 +137,11 @@ const defaultSettings: SiteSettings = {
   footerCompanyLink3Url: '#',
 };
 
-const STORAGE_KEY = 'site-settings';
-
 interface SiteSettingsContextType {
   settings: SiteSettings;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
   saveToDatabase: () => Promise<void>;
+  refreshFromDatabase: () => Promise<void>;
   loading: boolean;
 }
 
@@ -167,17 +153,17 @@ function dbToFrontend(dbSettings: Record<string, unknown>): Partial<SiteSettings
   const companyLinks = (dbSettings.footer_company_links as { text: string; url: string }[]) || [];
   
   return {
-    siteName: dbSettings.site_name as string,
-    siteDescription: dbSettings.site_description as string,
+    siteName: (dbSettings.site_name as string) || defaultSettings.siteName,
+    siteDescription: (dbSettings.site_description as string) || defaultSettings.siteDescription,
     logoUrl: (dbSettings.logo_url as string) || '',
     faviconUrl: (dbSettings.favicon_url as string) || '',
-    primaryColor: dbSettings.primary_color as string,
-    secondaryColor: dbSettings.secondary_color as string,
-    contactEmail: dbSettings.contact_email as string,
-    contactPhone: dbSettings.contact_phone as string,
+    primaryColor: (dbSettings.primary_color as string) || defaultSettings.primaryColor,
+    secondaryColor: (dbSettings.secondary_color as string) || defaultSettings.secondaryColor,
+    contactEmail: (dbSettings.contact_email as string) || defaultSettings.contactEmail,
+    contactPhone: (dbSettings.contact_phone as string) || defaultSettings.contactPhone,
     socialLinks: (dbSettings.social_links as SiteSettings['socialLinks']) || {},
-    footerText: dbSettings.footer_text as string,
-    maintenanceMode: dbSettings.maintenance_mode as boolean,
+    footerText: (dbSettings.footer_text as string) || defaultSettings.footerText,
+    maintenanceMode: (dbSettings.maintenance_mode as boolean) || false,
     heroTitle: (dbSettings.hero_title as string) || defaultSettings.heroTitle,
     heroSubtitle: (dbSettings.hero_subtitle as string) || defaultSettings.heroSubtitle,
     heroImage: (dbSettings.hero_image as string) || defaultSettings.heroImage,
@@ -289,42 +275,32 @@ function frontendToDb(settings: SiteSettings): Record<string, unknown> {
 }
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<SiteSettings>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return { ...defaultSettings, ...JSON.parse(saved) };
-      }
-    } catch {
-      // ignore
-    }
-    return defaultSettings;
-  });
+  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
 
-  // Load settings from Supabase on mount
-  useEffect(() => {
-    async function loadFromDatabase() {
-      try {
-        const { data, error } = await siteSettingsService.getSettings();
-        if (!error && data) {
-          const converted = dbToFrontend(data as unknown as Record<string, unknown>);
-          setSettings(prev => ({ ...prev, ...converted }));
-        }
-      } catch (err) {
-        console.error('Failed to load settings from database:', err);
-      } finally {
-        setLoading(false);
+  // Load settings from database
+  const loadFromDatabase = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await siteSettingsService.getSettings();
+      if (!error && data) {
+        const converted = dbToFrontend(data as unknown as Record<string, unknown>);
+        setSettings(prev => ({ ...prev, ...converted }));
       }
+    } catch (err) {
+      console.error('Failed to load settings from database:', err);
+    } finally {
+      setLoading(false);
     }
-    loadFromDatabase();
   }, []);
 
-  // Save to localStorage whenever settings change
+  // Load on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    
-    // Update favicon
+    loadFromDatabase();
+  }, [loadFromDatabase]);
+
+  // Update favicon and title when settings change
+  useEffect(() => {
     if (settings.faviconUrl) {
       const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link');
       link.type = 'image/x-icon';
@@ -332,26 +308,37 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       link.href = settings.faviconUrl;
       document.getElementsByTagName('head')[0].appendChild(link);
     }
-    
-    // Update document title
     document.title = settings.siteName;
-  }, [settings]);
+  }, [settings.faviconUrl, settings.siteName]);
 
-  const updateSettings = (newSettings: Partial<SiteSettings>) => {
+  const updateSettings = useCallback((newSettings: Partial<SiteSettings>) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
-  };
+  }, []);
 
-  const saveToDatabase = async () => {
+  const saveToDatabase = useCallback(async () => {
     const dbData = frontendToDb(settings);
-    const { error } = await siteSettingsService.updateSettings(dbData as Parameters<typeof siteSettingsService.updateSettings>[0]);
+    const { error } = await siteSettingsService.updateSettings(
+      dbData as Parameters<typeof siteSettingsService.updateSettings>[0]
+    );
     if (error) {
       console.error('Failed to save settings to database:', error);
       throw error;
     }
-  };
+    // Kaydetme başarılı - state zaten güncel
+  }, [settings]);
+
+  const refreshFromDatabase = useCallback(async () => {
+    await loadFromDatabase();
+  }, [loadFromDatabase]);
 
   return (
-    <SiteSettingsContext.Provider value={{ settings, updateSettings, saveToDatabase, loading }}>
+    <SiteSettingsContext.Provider value={{ 
+      settings, 
+      updateSettings, 
+      saveToDatabase, 
+      refreshFromDatabase,
+      loading 
+    }}>
       {children}
     </SiteSettingsContext.Provider>
   );
@@ -360,20 +347,13 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 export function useSiteSettings() {
   const context = useContext(SiteSettingsContext);
   if (!context) {
-    return { settings: defaultSettings, updateSettings: () => {}, saveToDatabase: async () => {}, loading: false };
+    return { 
+      settings: defaultSettings, 
+      updateSettings: () => {}, 
+      saveToDatabase: async () => {}, 
+      refreshFromDatabase: async () => {},
+      loading: false 
+    };
   }
   return context;
-}
-
-// Helper to get settings without hook (for non-React code)
-export function getSiteSettings(): SiteSettings {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      return { ...defaultSettings, ...JSON.parse(saved) };
-    }
-  } catch {
-    // ignore
-  }
-  return defaultSettings;
 }
