@@ -348,18 +348,36 @@ export const siteSettingsService = {
       .from('site_settings')
       .select('*')
       .eq('id', 1)
-      .single();
+      .maybeSingle();
     return { data: data as SiteSettings | null, error };
   },
 
   async updateSettings(updates: Partial<SiteSettings>) {
-    const { data, error } = await supabase
+    // Önce mevcut kaydı kontrol et
+    const { data: existing } = await supabase
       .from('site_settings')
-      .update(updates)
+      .select('id')
       .eq('id', 1)
-      .select()
-      .single();
-    return { data: data as SiteSettings | null, error };
+      .maybeSingle();
+
+    if (existing) {
+      // Güncelle
+      const { data, error } = await supabase
+        .from('site_settings')
+        .update(updates)
+        .eq('id', 1)
+        .select()
+        .maybeSingle();
+      return { data: data as SiteSettings | null, error };
+    } else {
+      // Yeni kayıt oluştur
+      const { data, error } = await supabase
+        .from('site_settings')
+        .insert({ id: 1, ...updates })
+        .select()
+        .maybeSingle();
+      return { data: data as SiteSettings | null, error };
+    }
   },
 };
 
