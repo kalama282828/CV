@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 
 export interface SiteSettings {
   siteName: string;
@@ -135,6 +136,7 @@ const STORAGE_KEY = 'site-settings';
 
 
 export function SettingsPage() {
+  const { settings: contextSettings, updateSettings: updateContextSettings, saveToDatabase } = useSiteSettings();
   const [settings, setSettings] = useState<SiteSettings>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -143,20 +145,32 @@ export function SettingsPage() {
     return defaultSettings;
   });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [landingSubTab, setLandingSubTab] = useState('hero');
 
+  // Sync with context settings
   useEffect(() => {
-    try {
-      const s = localStorage.getItem(STORAGE_KEY);
-      if (s) setSettings({ ...defaultSettings, ...JSON.parse(s) });
-    } catch { /* ignore */ }
-  }, []);
+    setSettings(prev => ({ ...prev, ...contextSettings }));
+  }, [contextSettings]);
 
-  const handleSave = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      // Update context
+      updateContextSettings(settings);
+      // Save to Supabase
+      await saveToDatabase();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Kaydetme hatası:', error);
+      alert('Veritabanına kaydedilirken hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const tabs = [
@@ -433,7 +447,9 @@ export function SettingsPage() {
       </div>
 
       <div className="settings-footer">
-        <button className="btn primary large" onClick={handleSave}>💾 Kaydet</button>
+        <button className="btn primary large" onClick={handleSave} disabled={saving}>
+          {saving ? '⏳ Kaydediliyor...' : '💾 Kaydet'}
+        </button>
       </div>
     </div>
   );
