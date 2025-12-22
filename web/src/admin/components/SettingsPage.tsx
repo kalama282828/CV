@@ -64,6 +64,8 @@ export interface SiteSettings {
   footerCompanyLink2Url: string;
   footerCompanyLink3Text: string;
   footerCompanyLink3Url: string;
+  stripePublishableKey: string;
+  stripeMode: 'test' | 'live';
 }
 
 
@@ -130,6 +132,8 @@ const defaultSettings: SiteSettings = {
   footerCompanyLink2Url: '#',
   footerCompanyLink3Text: 'Kariyer',
   footerCompanyLink3Url: '#',
+  stripePublishableKey: '',
+  stripeMode: 'test',
 };
 
 const STORAGE_KEY = 'site-settings';

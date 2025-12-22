@@ -9,7 +9,7 @@ import * as fc from 'fast-check';
 
 // Mock signature validation logic (simulates Stripe's signature verification)
 function validateWebhookSignature(
-  payload: string,
+  _payload: string,
   signature: string | null,
   secret: string
 ): { valid: boolean; error?: string } {
