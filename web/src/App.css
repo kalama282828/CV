@@ -533,3 +533,258 @@ body {
   font-size: 11px;
   margin-top: 12px;
 }
+
+
+/* ==================== MOBILE RESPONSIVE ==================== */
+
+/* Tablet and below */
+@media (max-width: 1024px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+  
+  .preview-panel {
+    display: none;
+  }
+  
+  .editor {
+    border-right: none;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  
+  .header h1 {
+    font-size: 1.25rem;
+  }
+  
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .header-actions .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .language-selector {
+    margin-right: 0;
+    padding-right: 0;
+    border-right: none;
+    order: -1;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .tab {
+    padding: 10px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .form-container {
+    padding: 16px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .skill-input-row {
+    flex-direction: column;
+  }
+  
+  .skill-input-row select {
+    width: 100%;
+  }
+  
+  .entry-card {
+    padding: 12px;
+  }
+  
+  .entry-card-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  /* Plan badge mobile */
+  .plan-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .header {
+    padding: 10px 12px;
+  }
+  
+  .header h1 {
+    font-size: 1.1rem;
+  }
+  
+  .header-actions {
+    gap: 6px;
+  }
+  
+  .header-actions .btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  
+  .lang-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  
+  .tab {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .form-container {
+    padding: 12px;
+  }
+  
+  .form-group label {
+    font-size: 13px;
+  }
+  
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  
+  /* Payment modal mobile */
+  .payment-modal-simple {
+    margin: 16px;
+    padding: 20px 16px;
+    max-width: calc(100% - 32px);
+  }
+  
+  .price-amount {
+    font-size: 40px;
+  }
+  
+  .feature-grid {
+    gap: 6px;
+  }
+  
+  .feature-item {
+    padding: 10px 6px;
+  }
+  
+  .feature-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+  
+  .feature-item span:last-child {
+    font-size: 11px;
+  }
+}
+
+/* Preview toggle for mobile - show/hide preview */
+.preview-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  cursor: pointer;
+  font-size: 24px;
+  z-index: 100;
+}
+
+@media (max-width: 1024px) {
+  .preview-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Mobile preview overlay */
+.preview-overlay {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+  }
+  
+  .preview-overlay.active {
+    display: flex;
+  }
+  
+  .preview-overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #1e3a5f;
+    color: white;
+  }
+  
+  .preview-overlay-header h3 {
+    font-size: 16px;
+  }
+  
+  .preview-overlay-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+  }
+  
+  .preview-overlay-content {
+    flex: 1;
+    overflow: auto;
+    padding: 16px;
+    background: #f9fafb;
+  }
+}
