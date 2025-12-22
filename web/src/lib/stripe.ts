@@ -1,4 +1,5 @@
-import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import type { Stripe } from '@stripe/stripe-js';
 import { supabase } from './supabase';
 
 // Stripe instance cache
@@ -94,24 +95,6 @@ export async function createCheckoutSession(
 }
 
 /**
- * Redirect to Stripe Checkout
- */
-export async function redirectToCheckout(sessionId: string): Promise<void> {
-  const stripe = await initStripe();
-  
-  if (!stripe) {
-    throw new Error('Stripe not initialized');
-  }
-
-  const { error } = await stripe.redirectToCheckout({ sessionId });
-  
-  if (error) {
-    console.error('Error redirecting to checkout:', error);
-    throw new Error(error.message || 'Failed to redirect to checkout');
-  }
-}
-
-/**
  * Start the checkout flow - creates session and redirects
  */
 export async function startCheckout(request: CheckoutSessionRequest): Promise<void> {
@@ -120,10 +103,7 @@ export async function startCheckout(request: CheckoutSessionRequest): Promise<vo
   if (session.url) {
     // Direct redirect to Stripe Checkout URL
     window.location.href = session.url;
-  } else if (session.sessionId) {
-    // Fallback to Stripe.js redirect
-    await redirectToCheckout(session.sessionId);
   } else {
-    throw new Error('No checkout URL or session ID returned');
+    throw new Error('No checkout URL returned from Stripe');
   }
 }

@@ -26,25 +26,19 @@ CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
 -- Enable Row Level Security
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own payments" ON payments;
+DROP POLICY IF EXISTS "Anyone can check payment by email" ON payments;
+DROP POLICY IF EXISTS "Service role full access" ON payments;
+DROP POLICY IF EXISTS "Allow insert for checkout" ON payments;
+DROP POLICY IF EXISTS "Allow update for webhooks" ON payments;
 
--- Users can view their own payments (by user_id or email)
-CREATE POLICY "Users can view own payments" ON payments
-  FOR SELECT 
-  USING (
-    auth.uid() = user_id 
-    OR email = (SELECT email FROM auth.users WHERE id = auth.uid())
-  );
+-- RLS Policies (simplified for public access since payments need to be checked by email)
 
--- Allow anonymous users to check payment by email (for non-logged in users)
-CREATE POLICY "Anyone can check payment by email" ON payments
+-- Allow anyone to read payments (needed for checking payment status by email)
+CREATE POLICY "Public read access" ON payments
   FOR SELECT
   USING (true);
-
--- Service role can do everything (for webhooks)
-CREATE POLICY "Service role full access" ON payments
-  FOR ALL
-  USING (auth.role() = 'service_role');
 
 -- Allow insert for checkout session creation
 CREATE POLICY "Allow insert for checkout" ON payments
@@ -57,6 +51,9 @@ CREATE POLICY "Allow update for webhooks" ON payments
   USING (true);
 
 -- Create updated_at trigger
+DROP TRIGGER IF EXISTS payments_updated_at ON payments;
+DROP FUNCTION IF EXISTS update_payments_updated_at();
+
 CREATE OR REPLACE FUNCTION update_payments_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
