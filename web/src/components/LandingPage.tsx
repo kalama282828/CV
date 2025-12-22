@@ -263,7 +263,8 @@ export function LandingPage() {
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Tüm şablonlar</li>
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>PDF & Word formatı</li>
                   </ul>
-                  <button onClick={() => handlePurchase('one-time')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Satın Al</button>
+                  <button onClick={handleGetStarted} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Ücretsiz Başla</button>
+                  <p className="text-xs text-center text-[#616f89]">PDF indirirken ödeme yapılır</p>
                 </div>
                 <div className="flex flex-col gap-4 rounded-xl border-2 bg-white dark:bg-gray-900 p-6 relative" style={{ borderColor: settings.primaryColor }}>
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-white text-xs font-bold" style={{ backgroundColor: settings.primaryColor }}>Popüler</div>
