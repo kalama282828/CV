@@ -4,7 +4,7 @@ import { useSiteSettings } from '../context/SiteSettingsContext';
 // LandingPage - Türkçe ana sayfa komponenti
 export function LandingPage() {
   const navigate = useNavigate();
-  const { settings } = useSiteSettings();
+  const { settings, loading } = useSiteSettings();
 
   const handleGetStarted = () => {
     try {
@@ -16,6 +16,15 @@ export function LandingPage() {
     } catch { /* ignore */ }
     navigate('/kayit');
   };
+
+  // Veri yüklenene kadar loading göster
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f6f6f8] dark:bg-[#101622]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="landing-page bg-[#f6f6f8] dark:bg-[#101622] text-[#111318] dark:text-white min-h-screen">
