@@ -140,7 +140,7 @@ const defaultSettings: SiteSettings = {
 interface SiteSettingsContextType {
   settings: SiteSettings;
   updateSettings: (newSettings: Partial<SiteSettings>) => void;
-  saveToDatabase: () => Promise<void>;
+  saveToDatabase: (settingsToSave?: SiteSettings) => Promise<void>;
   refreshFromDatabase: () => Promise<void>;
   loading: boolean;
 }
@@ -322,8 +322,9 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({ ...prev, ...newSettings }));
   }, []);
 
-  const saveToDatabase = useCallback(async () => {
-    const dbData = frontendToDb(settings);
+  const saveToDatabase = useCallback(async (settingsToSave?: SiteSettings) => {
+    const dataToSave = settingsToSave || settings;
+    const dbData = frontendToDb(dataToSave);
     console.log('💾 Saving to Supabase:', dbData);
     const { data, error } = await siteSettingsService.updateSettings(
       dbData as Parameters<typeof siteSettingsService.updateSettings>[0]
@@ -334,7 +335,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       throw error;
     }
     console.log('✅ Settings saved successfully');
-    // Kaydetme başarılı - state zaten güncel
   }, [settings]);
 
   const refreshFromDatabase = useCallback(async () => {

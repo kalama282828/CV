@@ -161,8 +161,8 @@ export function SettingsPage() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
       // Update context
       updateContextSettings(settings);
-      // Save to Supabase
-      await saveToDatabase();
+      // Save to Supabase with current settings
+      await saveToDatabase(settings);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
