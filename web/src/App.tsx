@@ -77,6 +77,7 @@ function App() {
   const [template, setTemplate] = useState<TemplateName>(() => loadSavedData().template);
   const [language, setLanguage] = useState<Language>(() => loadSavedData().language);
   const [activeTab, setActiveTab] = useState<string>('personal');
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
   
   // User/Payment state
   const [plan, _setPlan] = useState<PlanType>(() => loadUserData().plan);
@@ -287,6 +288,34 @@ function App() {
           <Preview data={cvData} template={template} language={language} />
         </div>
       </main>
+
+      {/* Mobile Preview Toggle Button */}
+      <button 
+        className="preview-toggle-btn"
+        onClick={() => setShowMobilePreview(true)}
+        title="Önizleme"
+      >
+        👁️
+      </button>
+
+      {/* Mobile Preview Modal */}
+      {showMobilePreview && (
+        <div className="mobile-preview-modal">
+          <div className="mobile-preview-header">
+            <h3>CV Önizleme</h3>
+            <button 
+              className="mobile-preview-close"
+              onClick={() => setShowMobilePreview(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="mobile-preview-content">
+            <TemplateSelector selected={template} onChange={setTemplate} />
+            <Preview data={cvData} template={template} language={language} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
