@@ -4,8 +4,10 @@ import { startCheckout, getStripePublishableKey, isStripeTestMode } from '../lib
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPaymentSuccess: () => void;
+  onPaymentSuccess?: () => void;
   price?: number;
+  amount?: number;
+  planName?: string;
   userEmail?: string;
 }
 
@@ -13,11 +15,16 @@ export function PaymentModal({
   isOpen, 
   onClose, 
   onPaymentSuccess, 
-  price = 50,
+  price,
+  amount,
+  planName = 'CV İndirme',
   userEmail 
 }: PaymentModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Use amount if provided, otherwise fall back to price, then default to 50
+  const finalPrice = amount ?? price ?? 50;
 
   if (!isOpen) return null;
 
@@ -37,14 +44,14 @@ export function PaymentModal({
       const currentUrl = window.location.origin;
       
       await startCheckout({
-        priceAmount: price,
+        priceAmount: finalPrice,
         userEmail,
         successUrl: `${currentUrl}/payment/success`,
         cancelUrl: `${currentUrl}/payment/cancel`,
       });
       
       // If we get here, redirect didn't happen (shouldn't normally reach this)
-      onPaymentSuccess();
+      onPaymentSuccess?.();
     } catch (err) {
       console.error('Payment error:', err);
       setError(err instanceof Error ? err.message : 'Ödeme işlemi başlatılamadı. Lütfen tekrar deneyin.');
@@ -54,7 +61,7 @@ export function PaymentModal({
 
   // Fallback for when Stripe is not configured (demo mode)
   const handleDemoPayment = () => {
-    onPaymentSuccess();
+    onPaymentSuccess?.();
     onClose();
   };
 
@@ -82,12 +89,12 @@ export function PaymentModal({
         
         <div className="modal-icon">📄</div>
         
-        <h2>CV İndirme</h2>
+        <h2>{planName}</h2>
         <p className="modal-subtitle">Tek Seferlik Premium</p>
         
         {/* Price Card */}
         <div className="price-card">
-          <div className="price-amount">₺{price}</div>
+          <div className="price-amount">₺{finalPrice}</div>
           <div className="price-badge">TEK SEFERLİK</div>
         </div>
         

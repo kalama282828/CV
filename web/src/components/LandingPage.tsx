@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { PaymentModal } from './PaymentModal';
 
 // LandingPage - Türkçe ana sayfa komponenti
 export function LandingPage() {
   const navigate = useNavigate();
   const { settings, loading } = useSiteSettings();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'one-time' | 'pro' | 'business'>('one-time');
 
   const handleGetStarted = () => {
     try {
@@ -15,6 +19,27 @@ export function LandingPage() {
       }
     } catch { /* ignore */ }
     navigate('/kayit');
+  };
+
+  const handlePurchase = (plan: 'one-time' | 'pro' | 'business') => {
+    setSelectedPlan(plan);
+    setShowPaymentModal(true);
+  };
+
+  const getPlanPrice = () => {
+    switch (selectedPlan) {
+      case 'one-time': return settings.oneTimePrice;
+      case 'pro': return settings.proMonthlyPrice;
+      case 'business': return settings.businessMonthlyPrice;
+    }
+  };
+
+  const getPlanName = () => {
+    switch (selectedPlan) {
+      case 'one-time': return 'Tek Seferlik CV İndirme';
+      case 'pro': return 'Pro Plan (Aylık)';
+      case 'business': return 'İşletme Plan (Aylık)';
+    }
   };
 
   // Veri yüklenene kadar loading göster
@@ -238,7 +263,7 @@ export function LandingPage() {
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Tüm şablonlar</li>
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>PDF & Word formatı</li>
                   </ul>
-                  <button onClick={handleGetStarted} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Başla</button>
+                  <button onClick={() => handlePurchase('one-time')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Satın Al</button>
                 </div>
                 <div className="flex flex-col gap-4 rounded-xl border-2 bg-white dark:bg-gray-900 p-6 relative" style={{ borderColor: settings.primaryColor }}>
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-white text-xs font-bold" style={{ backgroundColor: settings.primaryColor }}>Popüler</div>
@@ -253,7 +278,7 @@ export function LandingPage() {
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Akıllı öneriler</li>
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Öncelikli destek</li>
                   </ul>
-                  <button onClick={handleGetStarted} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 text-white font-bold" style={{ backgroundColor: settings.primaryColor }}>Pro'ya Geç</button>
+                  <button onClick={() => handlePurchase('pro')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 text-white font-bold" style={{ backgroundColor: settings.primaryColor }}>Pro'ya Geç</button>
                 </div>
                 <div className="flex flex-col gap-4 rounded-xl border border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
                   <h3 className="text-[#111318] dark:text-white text-xl font-bold">İşletme</h3>
@@ -267,7 +292,7 @@ export function LandingPage() {
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>API erişimi</li>
                     <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>7/24 destek</li>
                   </ul>
-                  <button onClick={handleGetStarted} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">İletişime Geç</button>
+                  <button onClick={() => handlePurchase('business')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Satın Al</button>
                 </div>
               </div>
             </div>
@@ -327,6 +352,14 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        amount={getPlanPrice()}
+        planName={getPlanName()}
+      />
     </div>
   );
 }
