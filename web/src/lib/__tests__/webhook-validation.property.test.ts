@@ -8,11 +8,14 @@ import * as fc from 'fast-check';
  */
 
 // Mock signature validation logic (simulates Stripe's signature verification)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function validateWebhookSignature(
-  _payload: string,
+  payload: string,
   signature: string | null,
   secret: string
 ): { valid: boolean; error?: string } {
+  // payload is used for HMAC verification in real implementation
+  void payload;
   // No signature provided
   if (!signature) {
     return { valid: false, error: 'No signature' };

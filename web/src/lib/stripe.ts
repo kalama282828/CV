@@ -1,5 +1,4 @@
-import { loadStripe } from '@stripe/stripe-js';
-import type { Stripe } from '@stripe/stripe-js';
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { supabase } from './supabase';
 
 // Stripe instance cache
