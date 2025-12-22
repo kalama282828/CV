@@ -463,6 +463,159 @@ export const templatesService = {
 };
 
 // =====================================================
+// STRIPE PAYMENTS SERVICE
+// =====================================================
+
+export interface StripePayment {
+  id: string;
+  user_id: string | null;
+  session_id: string;
+  stripe_payment_intent: string | null;
+  email: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  metadata: Record<string, unknown>;
+  created_at: string;
+  completed_at: string | null;
+  updated_at: string;
+}
+
+export const stripePaymentsService = {
+  /**
+   * Create a new payment record when checkout session is created
+   */
+  async createPaymentRecord(payment: {
+    session_id: string;
+    email: string;
+    amount: number;
+    currency?: string;
+    user_id?: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    const { data, error } = await supabase
+      .from('payments')
+      .insert({
+        session_id: payment.session_id,
+        email: payment.email,
+        amount: payment.amount,
+        currency: payment.currency || 'try',
+        user_id: payment.user_id || null,
+        metadata: payment.metadata || {},
+        status: 'pending',
+      })
+      .select()
+      .single();
+    return { data: data as StripePayment | null, error };
+  },
+
+  /**
+   * Update payment status (called by webhook)
+   */
+  async updatePaymentStatus(
+    sessionId: string,
+    status: 'pending' | 'completed' | 'failed' | 'refunded',
+    stripePaymentIntent?: string
+  ) {
+    const updates: Partial<StripePayment> = { status };
+    
+    if (status === 'completed') {
+      updates.completed_at = new Date().toISOString();
+    }
+    
+    if (stripePaymentIntent) {
+      updates.stripe_payment_intent = stripePaymentIntent;
+    }
+
+    const { data, error } = await supabase
+      .from('payments')
+      .update(updates)
+      .eq('session_id', sessionId)
+      .select()
+      .single();
+    return { data: data as StripePayment | null, error };
+  },
+
+  /**
+   * Get payment by session ID
+   */
+  async getPaymentBySessionId(sessionId: string) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+    return { data: data as StripePayment | null, error };
+  },
+
+  /**
+   * Get payment by email
+   */
+  async getPaymentByEmail(email: string) {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('email', email)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return { data: data as StripePayment | null, error };
+  },
+
+  /**
+   * Check if user has completed payment (by email)
+   */
+  async checkPaymentStatus(email: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('email', email)
+      .eq('status', 'completed')
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking payment status:', error);
+      return false;
+    }
+    
+    return data !== null;
+  },
+
+  /**
+   * Check if user has completed payment (by user ID)
+   */
+  async checkPaymentStatusByUserId(userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking payment status:', error);
+      return false;
+    }
+    
+    return data !== null;
+  },
+
+  /**
+   * Get all payments for admin dashboard
+   */
+  async getAllStripePayments() {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return { data: data as StripePayment[] | null, error };
+  },
+};
+
+// =====================================================
 // DASHBOARD STATS SERVICE
 // =====================================================
 

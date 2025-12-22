@@ -9,7 +9,9 @@ import { AdditionalInfoForm } from './components/AdditionalInfoForm';
 import { Preview } from './components/Preview';
 import { TemplateSelector } from './components/TemplateSelector';
 import { PaymentModal } from './components/PaymentModal';
+import { StripeTestBanner } from './components/StripeTestBanner';
 import { useSiteSettings } from './context/SiteSettingsContext';
+import { stripePaymentsService } from './lib/database';
 import './App.css';
 
 const STORAGE_KEY = 'cv-generator-data';
@@ -83,6 +85,38 @@ function App() {
   const [plan, _setPlan] = useState<PlanType>(() => loadUserData().plan);
   const [hasPurchased, setHasPurchased] = useState(() => loadUserData().hasPurchased);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+
+  // Check payment status on mount
+  useEffect(() => {
+    const checkPayment = async () => {
+      // Check URL for payment success
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      
+      if (sessionId) {
+        // Payment completed, verify and update status
+        const payment = await stripePaymentsService.getPaymentBySessionId(sessionId);
+        if (payment.data?.status === 'completed') {
+          setHasPurchased(true);
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+      
+      // Also check by email if available
+      const savedEmail = localStorage.getItem('cv-user-email');
+      if (savedEmail) {
+        setUserEmail(savedEmail);
+        const hasPayment = await stripePaymentsService.checkPaymentStatus(savedEmail);
+        if (hasPayment) {
+          setHasPurchased(true);
+        }
+      }
+    };
+    
+    checkPayment();
+  }, []);
 
   // Auto-save CV data
   useEffect(() => {
@@ -138,8 +172,8 @@ function App() {
     }
   };
 
-  const handlePayment = () => {
-    // Simulate payment success
+  const handlePaymentSuccess = () => {
+    // Called when payment is successful (demo mode or after redirect)
     setHasPurchased(true);
     setShowPaymentModal(false);
     // Export PDF after payment
@@ -177,12 +211,16 @@ function App() {
 
   return (
     <div className="app">
+      {/* Stripe Test Mode Banner */}
+      <StripeTestBanner />
+
       {/* Payment Modal */}
       <PaymentModal 
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        onPayment={handlePayment}
+        onPaymentSuccess={handlePaymentSuccess}
         price={settings.oneTimePrice}
+        userEmail={userEmail || cvData.personalInfo.email}
       />
 
       <header className="header">

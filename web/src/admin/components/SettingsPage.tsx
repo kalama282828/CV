@@ -179,6 +179,7 @@ export function SettingsPage() {
     { id: 'landing', label: '📄 Ana Sayfa' },
     { id: 'footer', label: '🦶 Footer' },
     { id: 'pricing', label: '💰 Fiyatlandırma' },
+    { id: 'stripe', label: '💳 Stripe' },
     { id: 'contact', label: '📞 İletişim' },
     { id: 'social', label: '🔗 Sosyal Medya' },
     { id: 'advanced', label: '⚙️ Gelişmiş' },
@@ -360,6 +361,174 @@ export function SettingsPage() {
             <div className="pricing-card"><h3>💳 Tek Seferlik (PDF)</h3><div className="form-group"><label>Fiyat (₺)</label><input type="number" value={settings.oneTimePrice} onChange={e => setSettings({ ...settings, oneTimePrice: Number(e.target.value) })} /></div></div>
             <div className="pricing-card"><h3>⭐ Pro Plan</h3><div className="form-row"><div className="form-group"><label>Aylık (₺)</label><input type="number" value={settings.proMonthlyPrice} onChange={e => setSettings({ ...settings, proMonthlyPrice: Number(e.target.value) })} /></div><div className="form-group"><label>Yıllık (₺)</label><input type="number" value={settings.proYearlyPrice} onChange={e => setSettings({ ...settings, proYearlyPrice: Number(e.target.value) })} /></div></div></div>
             <div className="pricing-card"><h3>🏢 Business Plan</h3><div className="form-row"><div className="form-group"><label>Aylık (₺)</label><input type="number" value={settings.businessMonthlyPrice} onChange={e => setSettings({ ...settings, businessMonthlyPrice: Number(e.target.value) })} /></div><div className="form-group"><label>Yıllık (₺)</label><input type="number" value={settings.businessYearlyPrice} onChange={e => setSettings({ ...settings, businessYearlyPrice: Number(e.target.value) })} /></div></div></div>
+          </div>
+        )}
+
+        {activeTab === 'stripe' && (
+          <div className="settings-section">
+            <h2>💳 Stripe Ödeme Ayarları</h2>
+            
+            {/* Warning if not configured */}
+            {!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY && (
+              <div style={{
+                background: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
+              }}>
+                <span style={{ fontSize: '20px' }}>⚠️</span>
+                <div>
+                  <strong style={{ color: '#92400e' }}>Stripe Yapılandırılmamış</strong>
+                  <p style={{ color: '#92400e', fontSize: '14px', marginTop: '4px' }}>
+                    Ödeme almak için Stripe API anahtarlarını yapılandırmanız gerekiyor.
+                    <code style={{ 
+                      background: '#fef9c3', 
+                      padding: '2px 6px', 
+                      borderRadius: '4px',
+                      marginLeft: '4px'
+                    }}>
+                      VITE_STRIPE_PUBLISHABLE_KEY
+                    </code> environment variable'ını ayarlayın.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="feature-card">
+              <h4>🔑 API Anahtarları</h4>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '16px' }}>
+                Stripe Dashboard'dan API anahtarlarınızı alın: 
+                <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', marginLeft: '4px' }}>
+                  dashboard.stripe.com/apikeys
+                </a>
+              </p>
+              
+              <div className="form-group">
+                <label>Publishable Key (Genel Anahtar)</label>
+                <input 
+                  type="text" 
+                  value={import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''} 
+                  disabled
+                  placeholder="pk_test_... veya pk_live_..."
+                  style={{ background: '#f3f4f6' }}
+                />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                  Bu değer .env dosyasından okunur. Değiştirmek için VITE_STRIPE_PUBLISHABLE_KEY'i güncelleyin.
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label>Secret Key (Gizli Anahtar)</label>
+                <input 
+                  type="password" 
+                  value="••••••••••••••••••••"
+                  disabled
+                  style={{ background: '#f3f4f6' }}
+                />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>
+                  Gizli anahtar Supabase Edge Functions'da saklanır. Güvenlik için burada gösterilmez.
+                </small>
+              </div>
+            </div>
+
+            <div className="feature-card">
+              <h4>🧪 Test Modu</h4>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px',
+                background: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_') ? '#dcfce7' : '#fee2e2',
+                borderRadius: '8px'
+              }}>
+                <span style={{ fontSize: '24px' }}>
+                  {import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_') ? '🧪' : '🔴'}
+                </span>
+                <div>
+                  <strong>
+                    {import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_') 
+                      ? 'Test Modu Aktif' 
+                      : import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live_')
+                        ? 'Canlı Mod Aktif'
+                        : 'Yapılandırılmamış'}
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>
+                    {import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_test_')
+                      ? 'Test kartları ile ödeme yapabilirsiniz. Gerçek para çekilmez.'
+                      : import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.startsWith('pk_live_')
+                        ? 'Gerçek ödemeler alınıyor. Dikkatli olun!'
+                        : 'Stripe API anahtarı ayarlanmamış.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="feature-card">
+              <h4>💰 Ödeme Bilgileri</h4>
+              <div className="form-group">
+                <label>Tek Seferlik PDF Fiyatı</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '18px' }}>₺</span>
+                  <input 
+                    type="number" 
+                    value={settings.oneTimePrice} 
+                    onChange={e => setSettings({ ...settings, oneTimePrice: Number(e.target.value) })}
+                    style={{ width: '120px' }}
+                  />
+                  <span style={{ color: '#6b7280', fontSize: '14px' }}>
+                    = {(settings.oneTimePrice * 100).toLocaleString()} kuruş
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="feature-card">
+              <h4>🔗 Webhook Yapılandırması</h4>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '12px' }}>
+                Stripe Dashboard'da webhook endpoint'i ekleyin:
+              </p>
+              <div style={{
+                background: '#f3f4f6',
+                padding: '12px',
+                borderRadius: '8px',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                wordBreak: 'break-all'
+              }}>
+                {import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-webhook
+              </div>
+              <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                Events: checkout.session.completed, checkout.session.expired, payment_intent.payment_failed
+              </small>
+            </div>
+
+            <div className="feature-card">
+              <h4>🧪 Test Kartları</h4>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '12px' }}>
+                Test modunda aşağıdaki kartları kullanabilirsiniz:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: '#f9fafb', borderRadius: '6px' }}>
+                  <span>✅ Başarılı ödeme:</span>
+                  <code style={{ fontFamily: 'monospace' }}>4242 4242 4242 4242</code>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: '#f9fafb', borderRadius: '6px' }}>
+                  <span>❌ Reddedilen kart:</span>
+                  <code style={{ fontFamily: 'monospace' }}>4000 0000 0000 0002</code>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: '#f9fafb', borderRadius: '6px' }}>
+                  <span>🔐 3D Secure:</span>
+                  <code style={{ fontFamily: 'monospace' }}>4000 0025 0000 3155</code>
+                </div>
+              </div>
+              <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                Son kullanma: Gelecekteki herhangi bir tarih, CVC: Herhangi 3 rakam
+              </small>
+            </div>
           </div>
         )}
 

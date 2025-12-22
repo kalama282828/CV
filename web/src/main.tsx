@@ -7,6 +7,8 @@ import { LoginPage } from './components/LoginPage'
 import { RegisterPage } from './components/RegisterPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AdminPanel } from './admin/AdminPanel'
+import { PaymentSuccess } from './components/PaymentSuccess'
+import { PaymentCancel } from './components/PaymentCancel'
 import { SiteSettingsProvider } from './context/SiteSettingsContext'
 import { AuthProvider } from './context/AuthContext'
 import './index.css'
@@ -25,6 +27,8 @@ createRoot(document.getElementById('root')!).render(
                 <App />
               </ProtectedRoute>
             } />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/cancel" element={<PaymentCancel />} />
             <Route path="/admin/*" element={<AdminPanel />} />
           </Routes>
         </BrowserRouter>

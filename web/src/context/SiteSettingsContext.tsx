@@ -70,6 +70,9 @@ export interface SiteSettings {
   footerCompanyLink2Url: string;
   footerCompanyLink3Text: string;
   footerCompanyLink3Url: string;
+  // Stripe settings
+  stripePublishableKey: string;
+  stripeMode: 'test' | 'live';
 }
 
 const defaultSettings: SiteSettings = {
@@ -135,6 +138,8 @@ const defaultSettings: SiteSettings = {
   footerCompanyLink2Url: '#',
   footerCompanyLink3Text: 'Kariyer',
   footerCompanyLink3Url: '#',
+  stripePublishableKey: '',
+  stripeMode: 'test',
 };
 
 interface SiteSettingsContextType {
