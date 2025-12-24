@@ -321,6 +321,11 @@ function App() {
   };
 
   const handleExportPDF = () => {
+    // Veritabanı kontrolü tamamlanmadan işlem yapma
+    if (!paymentChecked) {
+      return;
+    }
+    
     if (!canExportPDF) {
       setShowPaymentModal(true);
       return;
@@ -448,8 +453,15 @@ function App() {
           <button className="btn btn-secondary" onClick={handleExportHTML}>
             HTML İndir
           </button>
-          <button className="btn btn-primary" onClick={handleExportPDF}>
-            📄 PDF İndir {paymentChecked && !canExportPDF && `(₺${settings.oneTimePrice})`}
+          <button 
+            className="btn btn-primary" 
+            onClick={handleExportPDF}
+            disabled={!paymentChecked}
+            style={{ opacity: !paymentChecked ? 0.6 : 1 }}
+          >
+            {!paymentChecked ? '⏳ Kontrol ediliyor...' : (
+              <>📄 PDF İndir {!canExportPDF && `(₺${settings.oneTimePrice})`}</>
+            )}
           </button>
         </div>
       </header>
