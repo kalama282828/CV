@@ -1,14 +1,10 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
-import { PaymentModal } from './PaymentModal';
 
 // LandingPage - Türkçe ana sayfa komponenti
 export function LandingPage() {
   const navigate = useNavigate();
   const { settings, loading } = useSiteSettings();
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'one-time' | 'pro' | 'business'>('one-time');
 
   const handleGetStarted = () => {
     try {
@@ -22,24 +18,10 @@ export function LandingPage() {
   };
 
   const handlePurchase = (plan: 'one-time' | 'pro' | 'business') => {
-    setSelectedPlan(plan);
-    setShowPaymentModal(true);
-  };
-
-  const getPlanPrice = () => {
-    switch (selectedPlan) {
-      case 'one-time': return settings.oneTimePrice;
-      case 'pro': return settings.proMonthlyPrice;
-      case 'business': return settings.businessMonthlyPrice;
-    }
-  };
-
-  const getPlanName = () => {
-    switch (selectedPlan) {
-      case 'one-time': return 'Tek Seferlik CV İndirme';
-      case 'pro': return 'Pro Plan (Aylık)';
-      case 'business': return 'İşletme Plan (Aylık)';
-    }
+    // Seçilen planı localStorage'a kaydet
+    localStorage.setItem('selected-plan', plan);
+    // Kayıt sayfasına yönlendir
+    navigate('/kayit?plan=' + plan);
   };
 
   // Veri yüklenene kadar loading göster
@@ -353,14 +335,6 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
-
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        amount={getPlanPrice()}
-        planName={getPlanName()}
-      />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { settings } = useSiteSettings();
   const { signUp, signInWithGoogle } = useAuth();
   const [name, setName] = useState('');
@@ -16,6 +17,19 @@ export function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  
+  // Seçilen plan (URL'den veya localStorage'dan)
+  const selectedPlan = searchParams.get('plan') || localStorage.getItem('selected-plan');
+
+  // Plan bilgisini göster
+  const getPlanInfo = () => {
+    switch (selectedPlan) {
+      case 'pro': return { name: 'Pro Plan', price: settings.proMonthlyPrice };
+      case 'business': return { name: 'İşletme Plan', price: settings.businessMonthlyPrice };
+      default: return null;
+    }
+  };
+  const planInfo = getPlanInfo();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +83,11 @@ export function RegisterPage() {
           <p className="text-[#616f89] dark:text-slate-400 mb-6">
             E-posta adresinize bir doğrulama bağlantısı gönderdik. Lütfen e-postanızı kontrol edin ve hesabınızı doğrulayın.
           </p>
+          {planInfo && (
+            <p className="text-[#616f89] dark:text-slate-400 mb-4">
+              Seçtiğiniz plan: <strong>{planInfo.name}</strong> - Giriş yaptıktan sonra ödeme yapabilirsiniz.
+            </p>
+          )}
           <button 
             onClick={() => navigate('/giris')}
             className="bg-[#135bec] text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors"
@@ -143,6 +162,25 @@ export function RegisterPage() {
               Ücretsiz kaydolun ve CV'nizi oluşturmaya başlayın.
             </p>
           </div>
+
+          {/* Selected Plan Banner */}
+          {planInfo && (
+            <div className="mb-6 p-4 rounded-lg border-2 border-[#135bec] bg-blue-50 dark:bg-blue-900/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[#135bec] font-bold text-sm">Seçilen Plan</p>
+                  <p className="text-[#111318] dark:text-white font-bold text-lg">{planInfo.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[#135bec] font-bold text-2xl">{planInfo.price}₺</p>
+                  <p className="text-[#616f89] text-xs">/ aylık</p>
+                </div>
+              </div>
+              <p className="text-[#616f89] dark:text-slate-400 text-xs mt-2">
+                Kayıt olduktan sonra ödeme sayfasına yönlendirileceksiniz.
+              </p>
+            </div>
+          )}
 
           {/* Form */}
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
