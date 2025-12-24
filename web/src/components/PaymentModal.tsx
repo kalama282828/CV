@@ -69,7 +69,10 @@ export function PaymentModal({
         });
       }
       
-      onPaymentSuccess?.();
+      // NOT: onPaymentSuccess burada ÇAĞRILMAMALI!
+      // Stripe yönlendirmesi yapılacak, ödeme başarılı olursa
+      // /payment/success sayfasına dönülecek ve orada işlenecek
+      
     } catch (err) {
       console.error('Payment error:', err);
       setError(err instanceof Error ? err.message : 'Ödeme işlemi başlatılamadı. Lütfen tekrar deneyin.');
