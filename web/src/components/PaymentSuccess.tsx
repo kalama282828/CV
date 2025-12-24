@@ -50,11 +50,6 @@ export function PaymentSuccess() {
               });
             }
           }
-          
-          localStorage.setItem('cv-user-data', JSON.stringify({ 
-            plan: plan, 
-            hasPurchased: true 
-          }));
         } else {
           // Tek seferlik ödeme
           const { data: payment } = await stripePaymentsService.getPaymentBySessionId(sessionId);
@@ -64,24 +59,14 @@ export function PaymentSuccess() {
             if (user?.id) {
               await profilesService.updateProfile(user.id, { has_purchased: true });
             }
-            localStorage.setItem('cv-user-data', JSON.stringify({ 
-              plan: 'free', 
-              hasPurchased: true 
-            }));
-            if (payment.email) {
-              localStorage.setItem('cv-user-email', payment.email);
-            }
           } else {
-            // Ödeme hala işleniyor olabilir, biraz bekle
+            // Ödeme hala işleniyor olabilir (webhook henüz gelmemiş), biraz bekle
+            // Webhook geldiğinde veritabanı güncellenecek
             setTimeout(async () => {
               setStatus('success');
               if (user?.id) {
                 await profilesService.updateProfile(user.id, { has_purchased: true });
               }
-              localStorage.setItem('cv-user-data', JSON.stringify({ 
-                plan: 'free', 
-                hasPurchased: true 
-              }));
             }, 2000);
           }
         }
@@ -89,15 +74,14 @@ export function PaymentSuccess() {
         console.error('Error verifying payment:', error);
         // Yine de başarılı göster, webhook durumu güncelleyecek
         setStatus('success');
-        localStorage.setItem('cv-user-data', JSON.stringify({ 
-          plan: paymentType === 'subscription' ? (plan || 'pro') : 'free', 
-          hasPurchased: true 
-        }));
+        if (user?.id) {
+          await profilesService.updateProfile(user.id, { has_purchased: true });
+        }
       }
     };
 
     verifyPayment();
-  }, [searchParams, user, paymentType]);
+  }, [searchParams, user]);
 
   // Countdown and redirect
   useEffect(() => {
