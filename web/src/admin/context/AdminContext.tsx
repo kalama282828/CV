@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
+import { supabase } from '../../lib/supabase';
 import {
   profilesService,
   subscriptionsService,
@@ -119,8 +120,6 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
-const ADMIN_AUTH_KEY = 'cv-admin-auth';
-
 const defaultStats: DashboardStats = {
   totalUsers: 0,
   activeSubscriptions: 0,
@@ -134,7 +133,7 @@ const defaultStats: DashboardStats = {
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [subscriptions, setSubscriptions] = useState<AdminSubscription[]>([]);
   const [payments, setPayments] = useState<AdminPayment[]>([]);
@@ -143,12 +142,58 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>(defaultStats);
   const [templates, setTemplates] = useState<Template[]>([]);
 
-  // Check auth on mount
+  // Check Supabase auth on mount
   useEffect(() => {
-    const auth = localStorage.getItem(ADMIN_AUTH_KEY);
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-    }
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Check if user is admin
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+            setIsAuthenticated(true);
+          } else {
+            setIsAuthenticated(false);
+          }
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+      } else if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Load all data when authenticated
@@ -159,19 +204,46 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Demo: admin@cvmaker.com / admin123
-    // TODO: Gerçek admin auth implementasyonu
-    if (email === 'admin@cvmaker.com' && password === 'admin123') {
-      setIsAuthenticated(true);
-      localStorage.setItem(ADMIN_AUTH_KEY, 'true');
-      return true;
+    try {
+      // Supabase ile giriş yap
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        return false;
+      }
+
+      if (data.user) {
+        // Kullanıcının admin olup olmadığını kontrol et
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+          setIsAuthenticated(true);
+          return true;
+        } else {
+          // Admin değilse çıkış yap
+          await supabase.auth.signOut();
+          return false;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
-    localStorage.removeItem(ADMIN_AUTH_KEY);
   };
 
   // =====================================================
