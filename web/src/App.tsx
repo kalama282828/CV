@@ -16,7 +16,6 @@ import { stripePaymentsService, cvsService, profilesService, subscriptionsServic
 import './App.css';
 
 const STORAGE_KEY = 'cv-generator-data';
-const USER_STORAGE_KEY = 'cv-user-data';
 
 export type PlanType = 'free' | 'pro' | 'business';
 
@@ -286,13 +285,10 @@ function App() {
     };
   }, [cvData, template, language, user?.id, dataLoaded, saveCvToDatabase]);
 
-  // Auto-save user data
-  useEffect(() => {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify({ plan, hasPurchased }));
-  }, [plan, hasPurchased]);
-
-  // PDF indirme yetkisi: Pro/Business abonelik VEYA tek seferlik ödeme yapmış
-  const canExportPDF = hasActiveSubscription || plan === 'pro' || plan === 'business' || hasPurchased;
+  // PDF indirme yetkisi: SADECE aktif abonelik VEYA tek seferlik ödeme yapmış
+  // NOT: plan === 'pro' || plan === 'business' kontrolü kaldırıldı çünkü 
+  // bu değerler sadece abonelik varsa geçerli olmalı
+  const canExportPDF = hasActiveSubscription || hasPurchased;
   
   // Debug log
   console.log('Payment status:', { 
@@ -453,7 +449,7 @@ function App() {
             HTML İndir
           </button>
           <button className="btn btn-primary" onClick={handleExportPDF}>
-            📄 PDF İndir {!canExportPDF && `(₺${settings.oneTimePrice})`}
+            📄 PDF İndir {paymentChecked && !canExportPDF && `(₺${settings.oneTimePrice})`}
           </button>
         </div>
       </header>
