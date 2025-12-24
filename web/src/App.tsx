@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { CVData, TemplateName, PersonalInfo, WorkExperience, Education, Skill, Language, AdditionalInfo } from './types';
 import { translations } from './types';
 import { PersonalInfoForm } from './components/PersonalInfoForm';
@@ -12,7 +12,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { StripeTestBanner } from './components/StripeTestBanner';
 import { useSiteSettings } from './context/SiteSettingsContext';
 import { useAuth } from './context/AuthContext';
-import { stripePaymentsService } from './lib/database';
+import { stripePaymentsService, cvsService, profilesService, subscriptionsService } from './lib/database';
 import './App.css';
 
 const STORAGE_KEY = 'cv-generator-data';
@@ -74,6 +74,49 @@ function loadUserData(): { plan: PlanType; hasPurchased: boolean } {
   return { plan: 'free', hasPurchased: false };
 }
 
+// CV verisini veritabanı formatına dönüştür
+function cvDataToDbFormat(cvData: CVData, template: TemplateName, language: Language) {
+  return {
+    title: cvData.personalInfo.name ? `${cvData.personalInfo.name} - CV` : 'Untitled CV',
+    template,
+    language,
+    personal_info: cvData.personalInfo as unknown as Record<string, unknown>,
+    photo: cvData.photo || null,
+    summary: cvData.summary || null,
+    work_experience: cvData.workExperience as unknown as Record<string, unknown>[],
+    education: cvData.education as unknown as Record<string, unknown>[],
+    skills: cvData.skills as unknown as Record<string, unknown>[],
+    additional_info: (cvData.additionalInfo || {}) as unknown as Record<string, unknown>,
+  };
+}
+
+// Veritabanı formatından CV verisine dönüştür
+function dbFormatToCvData(dbData: {
+  personal_info: Record<string, unknown>;
+  photo: string | null;
+  summary: string | null;
+  work_experience: Record<string, unknown>[];
+  education: Record<string, unknown>[];
+  skills: Record<string, unknown>[];
+  additional_info: Record<string, unknown>;
+  template: string;
+  language: string;
+}): { cvData: CVData; template: TemplateName; language: Language } {
+  return {
+    cvData: {
+      personalInfo: dbData.personal_info as unknown as PersonalInfo,
+      photo: dbData.photo || '',
+      summary: dbData.summary || '',
+      workExperience: dbData.work_experience as unknown as WorkExperience[],
+      education: dbData.education as unknown as Education[],
+      skills: dbData.skills as unknown as Skill[],
+      additionalInfo: dbData.additional_info as unknown as AdditionalInfo,
+    },
+    template: (dbData.template as TemplateName) || 'classic',
+    language: (dbData.language as Language) || 'tr',
+  };
+}
+
 function App() {
   const { settings } = useSiteSettings();
   const { user } = useAuth();
@@ -84,62 +127,199 @@ function App() {
   const [showMobilePreview, setShowMobilePreview] = useState(false);
   
   // User/Payment state
-  const [plan, _setPlan] = useState<PlanType>(() => loadUserData().plan);
-  const [hasPurchased, setHasPurchased] = useState(false); // Start with false, check from DB
+  const [plan, setPlan] = useState<PlanType>(() => loadUserData().plan);
+  const [hasPurchased, setHasPurchased] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [paymentChecked, setPaymentChecked] = useState(false);
+  
+  // CV database state
+  const [currentCvId, setCurrentCvId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // Debounce ref for auto-save
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check payment status on mount and when user changes
+  // Kullanıcı giriş yaptığında CV'yi veritabanından yükle
   useEffect(() => {
-    const checkPayment = async () => {
-      // Check URL for payment success
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionId = urlParams.get('session_id');
+    const loadUserCV = async () => {
+      if (!user?.id) {
+        setDataLoaded(true);
+        return;
+      }
       
-      if (sessionId) {
-        // Payment completed, verify and update status
-        const payment = await stripePaymentsService.getPaymentBySessionId(sessionId);
-        if (payment.data?.status === 'completed') {
-          setHasPurchased(true);
-          setPaymentChecked(true);
-          // Clean URL
-          window.history.replaceState({}, '', window.location.pathname);
+      try {
+        // Kullanıcının CV'lerini getir
+        const { data: cvs, error } = await cvsService.getUserCVs(user.id);
+        
+        if (error) {
+          console.error('CV yükleme hatası:', error);
+          setDataLoaded(true);
           return;
         }
+        
+        // En son güncellenen CV'yi yükle
+        if (cvs && cvs.length > 0) {
+          const latestCv = cvs[0];
+          const { cvData: loadedData, template: loadedTemplate, language: loadedLanguage } = dbFormatToCvData(latestCv);
+          
+          setCvData(loadedData);
+          setTemplate(loadedTemplate);
+          setLanguage(loadedLanguage);
+          setCurrentCvId(latestCv.id);
+          console.log('CV veritabanından yüklendi:', latestCv.id);
+        }
+      } catch (err) {
+        console.error('CV yükleme hatası:', err);
+      } finally {
+        setDataLoaded(true);
       }
-      
-      // Get email from auth user or localStorage
-      const email = user?.email || localStorage.getItem('cv-user-email');
-      if (email) {
-        setUserEmail(email);
-        localStorage.setItem('cv-user-email', email);
-        const hasPayment = await stripePaymentsService.checkPaymentStatus(email);
-        setHasPurchased(hasPayment);
-      } else {
-        setHasPurchased(false);
-      }
-      setPaymentChecked(true);
     };
     
-    checkPayment();
+    loadUserCV();
+  }, [user?.id]);
+
+  // Kullanıcı profili ve abonelik durumunu kontrol et
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      if (!user?.id) {
+        setPaymentChecked(true);
+        return;
+      }
+      
+      try {
+        // Profil bilgisini al
+        const { data: profile } = await profilesService.getProfile(user.id);
+        if (profile) {
+          setPlan(profile.plan as PlanType);
+          setHasPurchased(profile.has_purchased);
+        }
+        
+        // Aktif abonelik kontrolü
+        const { data: subscription } = await subscriptionsService.getUserSubscription(user.id);
+        if (subscription && subscription.status === 'active') {
+          setHasActiveSubscription(true);
+          setPlan(subscription.plan as PlanType);
+        }
+        
+        // Tek seferlik ödeme kontrolü (email ile)
+        if (user.email) {
+          setUserEmail(user.email);
+          const hasPayment = await stripePaymentsService.checkPaymentStatus(user.email);
+          if (hasPayment) {
+            setHasPurchased(true);
+          }
+        }
+      } catch (err) {
+        console.error('Kullanıcı durumu kontrol hatası:', err);
+      } finally {
+        setPaymentChecked(true);
+      }
+    };
+    
+    // URL'de session_id varsa ödeme başarılı
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    
+    if (sessionId) {
+      stripePaymentsService.getPaymentBySessionId(sessionId).then(({ data }) => {
+        if (data?.status === 'completed') {
+          setHasPurchased(true);
+          // Profili güncelle
+          if (user?.id) {
+            profilesService.updateProfile(user.id, { has_purchased: true });
+          }
+        }
+        window.history.replaceState({}, '', window.location.pathname);
+      });
+    }
+    
+    checkUserStatus();
   }, [user]);
 
-  // Auto-save CV data
+  // CV'yi veritabanına kaydet (debounced)
+  const saveCvToDatabase = useCallback(async () => {
+    if (!user?.id || !dataLoaded) return;
+    
+    setIsSaving(true);
+    
+    try {
+      const cvDbData = cvDataToDbFormat(cvData, template, language);
+      
+      if (currentCvId) {
+        // Mevcut CV'yi güncelle
+        const { error } = await cvsService.updateCV(currentCvId, cvDbData);
+        if (error) {
+          console.error('CV güncelleme hatası:', error);
+        } else {
+          setLastSaved(new Date());
+          console.log('CV güncellendi:', currentCvId);
+        }
+      } else {
+        // Yeni CV oluştur
+        const { data: newCv, error } = await cvsService.createCV(user.id, cvDbData);
+        if (error) {
+          console.error('CV oluşturma hatası:', error);
+        } else if (newCv) {
+          setCurrentCvId(newCv.id);
+          setLastSaved(new Date());
+          console.log('Yeni CV oluşturuldu:', newCv.id);
+        }
+      }
+    } catch (err) {
+      console.error('CV kaydetme hatası:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user?.id, cvData, template, language, currentCvId, dataLoaded]);
+
+  // Auto-save CV data to localStorage (always)
   useEffect(() => {
     const dataToSave = { cvData, template, language };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
   }, [cvData, template, language]);
+
+  // Auto-save CV data to database (debounced, only for logged-in users)
+  useEffect(() => {
+    if (!user?.id || !dataLoaded) return;
+    
+    // Debounce: 2 saniye bekle
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      saveCvToDatabase();
+    }, 2000);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [cvData, template, language, user?.id, dataLoaded, saveCvToDatabase]);
 
   // Auto-save user data
   useEffect(() => {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify({ plan, hasPurchased }));
   }, [plan, hasPurchased]);
 
-  // Debug: Log payment status
-  console.log('Payment status:', { plan, hasPurchased, paymentChecked, userEmail: userEmail || user?.email, canExportPDF: plan === 'pro' || plan === 'business' || hasPurchased });
+  // PDF indirme yetkisi: Pro/Business abonelik VEYA tek seferlik ödeme yapmış
+  const canExportPDF = hasActiveSubscription || plan === 'pro' || plan === 'business' || hasPurchased;
   
-  const canExportPDF = plan === 'pro' || plan === 'business' || hasPurchased;
+  // Debug log
+  console.log('Payment status:', { 
+    plan, 
+    hasPurchased, 
+    hasActiveSubscription, 
+    paymentChecked, 
+    canExportPDF,
+    userId: user?.id,
+    currentCvId 
+  });
 
   const tabs = [
     { id: 'personal', label: 'Kişisel Bilgiler' },
@@ -186,6 +366,12 @@ function App() {
     // Called when payment is successful (demo mode or after redirect)
     setHasPurchased(true);
     setShowPaymentModal(false);
+    
+    // Profili güncelle
+    if (user?.id) {
+      profilesService.updateProfile(user.id, { has_purchased: true });
+    }
+    
     // Export PDF after payment
     setTimeout(() => {
       exportPDF();
@@ -237,11 +423,24 @@ function App() {
         <h1>{settings.siteName}</h1>
         <div className="header-actions">
           {/* Plan Badge */}
-          {plan !== 'free' && (
-            <span className="plan-badge">{plan.toUpperCase()}</span>
+          {(hasActiveSubscription || plan === 'pro' || plan === 'business') && (
+            <span className="plan-badge">{plan.toUpperCase()} ∞</span>
           )}
-          {hasPurchased && plan === 'free' && (
+          {hasPurchased && !hasActiveSubscription && plan === 'free' && (
             <span className="plan-badge purchased">PDF ✓</span>
+          )}
+          
+          {/* Save Status */}
+          {user && (
+            <span className="save-status" style={{ 
+              fontSize: '12px', 
+              color: isSaving ? '#f59e0b' : lastSaved ? '#10b981' : '#9ca3af',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              {isSaving ? '💾 Kaydediliyor...' : lastSaved ? `✓ ${lastSaved.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+            </span>
           )}
           
           {/* Language Selector */}
