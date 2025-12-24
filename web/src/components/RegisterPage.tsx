@@ -317,7 +317,7 @@ export function RegisterPage() {
           <div className="mt-6 text-center">
             <p className="text-[#616f89] dark:text-slate-400 text-sm">
               Zaten hesabınız var mı? 
-              <a className="text-[#135bec] font-bold hover:underline ml-1" href="/giris">Giriş Yap</a>
+              <a className="text-[#135bec] font-bold hover:underline ml-1" href={selectedPlan ? `/giris?plan=${selectedPlan}` : '/giris'}>Giriş Yap</a>
             </p>
           </div>
         </div>

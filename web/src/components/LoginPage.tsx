@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
+import { PaymentModal } from './PaymentModal';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { settings } = useSiteSettings();
   const { signIn, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
@@ -12,6 +14,20 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Seçilen plan (URL'den veya localStorage'dan)
+  const selectedPlan = searchParams.get('plan') || localStorage.getItem('selected-plan');
+
+  // Plan bilgisini göster
+  const getPlanInfo = () => {
+    switch (selectedPlan) {
+      case 'pro': return { name: 'Pro Plan', price: settings.proMonthlyPrice };
+      case 'business': return { name: 'İşletme Plan', price: settings.businessMonthlyPrice };
+      default: return null;
+    }
+  };
+  const planInfo = getPlanInfo();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +41,12 @@ export function LoginPage() {
           ? 'E-posta veya şifre hatalı' 
           : error.message);
       } else {
-        navigate('/app');
+        // Seçilen plan varsa ödeme modalını aç
+        if (selectedPlan && (selectedPlan === 'pro' || selectedPlan === 'business')) {
+          setShowPaymentModal(true);
+        } else {
+          navigate('/app');
+        }
       }
     } catch {
       setError('Bir hata oluştu. Lütfen tekrar deneyin.');
@@ -37,9 +58,24 @@ export function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       await signInWithGoogle();
+      // Google login sonrası redirect olacak, plan kontrolü App.tsx'de yapılacak
     } catch {
       setError('Google ile giriş yapılamadı.');
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    // Ödeme başarılı, planı temizle ve app'e yönlendir
+    localStorage.removeItem('selected-plan');
+    setShowPaymentModal(false);
+    navigate('/app');
+  };
+
+  const handlePaymentClose = () => {
+    // Ödeme iptal, planı temizle ve app'e yönlendir
+    localStorage.removeItem('selected-plan');
+    setShowPaymentModal(false);
+    navigate('/app');
   };
 
   return (
@@ -94,6 +130,25 @@ export function LoginPage() {
               CV paneline erişmek için giriş yapın.
             </p>
           </div>
+
+          {/* Selected Plan Banner */}
+          {planInfo && (
+            <div className="mb-6 p-4 rounded-lg border-2 border-[#135bec] bg-blue-50 dark:bg-blue-900/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[#135bec] font-bold text-sm">Seçilen Plan</p>
+                  <p className="text-[#111318] dark:text-white font-bold text-lg">{planInfo.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[#135bec] font-bold text-2xl">{planInfo.price}₺</p>
+                  <p className="text-[#616f89] text-xs">/ aylık</p>
+                </div>
+              </div>
+              <p className="text-[#616f89] dark:text-slate-400 text-xs mt-2">
+                Giriş yaptıktan sonra ödeme sayfasına yönlendirileceksiniz.
+              </p>
+            </div>
+          )}
 
           {/* Form */}
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
@@ -183,11 +238,23 @@ export function LoginPage() {
           <div className="mt-8 text-center">
             <p className="text-[#616f89] dark:text-slate-400 text-sm">
               Hesabınız yok mu? 
-              <a className="text-[#135bec] font-bold hover:underline ml-1" href="/kayit">Hesap Oluştur</a>
+              <a className="text-[#135bec] font-bold hover:underline ml-1" href={selectedPlan ? `/kayit?plan=${selectedPlan}` : '/kayit'}>Hesap Oluştur</a>
             </p>
           </div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {planInfo && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={handlePaymentClose}
+          onPaymentSuccess={handlePaymentSuccess}
+          amount={planInfo.price}
+          planName={planInfo.name}
+          userEmail={email}
+        />
+      )}
     </div>
   );
 }
