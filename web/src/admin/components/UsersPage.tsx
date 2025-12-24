@@ -1,40 +1,94 @@
-import { useState } from 'react';
-import { useAdmin } from '../context/AdminContext';
-import type { User } from '../types';
+import { useState, useEffect } from 'react';
+import { useAdmin, type AdminUser } from '../context/AdminContext';
 
 export function UsersPage() {
-  const { users, updateUser, deleteUser } = useAdmin();
+  const { users, loadUsers, updateUser, deleteUser, loading } = useAdmin();
   const [search, setSearch] = useState('');
   const [filterPlan, setFilterPlan] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) ||
+    const matchesSearch = (user.name || '').toLowerCase().includes(search.toLowerCase()) ||
                          user.email.toLowerCase().includes(search.toLowerCase());
     const matchesPlan = filterPlan === 'all' || user.plan === filterPlan;
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
     return matchesSearch && matchesPlan && matchesStatus;
   });
 
-  const handleSaveUser = () => {
-    if (editingUser) {
-      updateUser(editingUser.id, editingUser);
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+    
+    setSaving(true);
+    try {
+      await updateUser(editingUser.id, {
+        name: editingUser.name,
+        email: editingUser.email,
+        phone: editingUser.phone,
+        plan: editingUser.plan,
+        status: editingUser.status,
+        has_purchased: editingUser.hasPurchased,
+      });
       setEditingUser(null);
+    } catch (error) {
+      alert('Kullanıcı güncellenirken hata oluştu');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDeleteUser = (id: string) => {
-    if (confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
-      deleteUser(id);
+  const handleDeleteUser = async (id: string) => {
+    if (confirm('Bu kullanıcıyı yasaklamak istediğinizden emin misiniz?')) {
+      try {
+        await deleteUser(id);
+      } catch (error) {
+        alert('Kullanıcı silinirken hata oluştu');
+      }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="page">
+        <h1>Kullanıcılar</h1>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '300px',
+          color: '#6b7280'
+        }}>
+          <span style={{ fontSize: '24px', marginRight: '12px' }}>⏳</span>
+          Kullanıcılar yükleniyor...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
       <div className="page-header">
         <h1>Kullanıcılar</h1>
-        <span className="count-badge">{users.length} kullanıcı</span>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <span className="count-badge">{users.length} kullanıcı</span>
+          <button 
+            onClick={loadUsers}
+            style={{
+              background: '#f3f4f6',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Yenile
+          </button>
+        </div>
       </div>
 
       <div className="filters">
@@ -75,32 +129,42 @@ export function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map(user => (
-              <tr key={user.id}>
-                <td>
-                  <div className="user-cell">
-                    <div className="avatar">{user.name.charAt(0)}</div>
-                    <div>
-                      <div className="name">{user.name}</div>
-                      <div className="email">{user.email}</div>
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map(user => (
+                <tr key={user.id}>
+                  <td>
+                    <div className="user-cell">
+                      <div className="avatar">{(user.name || user.email).charAt(0).toUpperCase()}</div>
+                      <div>
+                        <div className="name">{user.name || 'İsimsiz'}</div>
+                        <div className="email">{user.email}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td>{user.phone || '-'}</td>
-                <td><span className={`plan-badge ${user.plan}`}>{user.plan}</span></td>
-                <td>{user.hasPurchased ? <span className="badge success">Ödedi</span> : <span className="badge">Ödemedi</span>}</td>
-                <td>{user.cvCount}</td>
-                <td>{user.createdAt}</td>
-                <td>{user.lastLogin || '-'}</td>
-                <td><span className={`status-badge ${user.status}`}>{user.status}</span></td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="btn-icon" onClick={() => setEditingUser(user)} title="Düzenle">✏️</button>
-                    <button className="btn-icon danger" onClick={() => handleDeleteUser(user.id)} title="Sil">🗑️</button>
-                  </div>
+                  </td>
+                  <td>{user.phone || '-'}</td>
+                  <td><span className={`plan-badge ${user.plan}`}>{user.plan}</span></td>
+                  <td>{user.hasPurchased ? <span className="badge success">Ödedi</span> : <span className="badge">Ödemedi</span>}</td>
+                  <td>{user.cvCount}</td>
+                  <td>{user.createdAt}</td>
+                  <td>{user.lastLogin || '-'}</td>
+                  <td><span className={`status-badge ${user.status}`}>{user.status}</span></td>
+                  <td>
+                    <div className="action-buttons">
+                      <button className="btn-icon" onClick={() => setEditingUser(user)} title="Düzenle">✏️</button>
+                      <button className="btn-icon danger" onClick={() => handleDeleteUser(user.id)} title="Yasakla">🚫</button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                  {search || filterPlan !== 'all' || filterStatus !== 'all' 
+                    ? 'Filtrelere uygun kullanıcı bulunamadı' 
+                    : 'Henüz kullanıcı yok'}
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -117,7 +181,7 @@ export function UsersPage() {
                 <label>İsim</label>
                 <input
                   type="text"
-                  value={editingUser.name}
+                  value={editingUser.name || ''}
                   onChange={e => setEditingUser({ ...editingUser, name: e.target.value })}
                 />
               </div>
@@ -142,7 +206,7 @@ export function UsersPage() {
                   <label>Plan</label>
                   <select
                     value={editingUser.plan}
-                    onChange={e => setEditingUser({ ...editingUser, plan: e.target.value as User['plan'] })}
+                    onChange={e => setEditingUser({ ...editingUser, plan: e.target.value as AdminUser['plan'] })}
                   >
                     <option value="free">Free</option>
                     <option value="pro">Pro</option>
@@ -153,7 +217,7 @@ export function UsersPage() {
                   <label>Durum</label>
                   <select
                     value={editingUser.status}
-                    onChange={e => setEditingUser({ ...editingUser, status: e.target.value as User['status'] })}
+                    onChange={e => setEditingUser({ ...editingUser, status: e.target.value as AdminUser['status'] })}
                   >
                     <option value="active">Aktif</option>
                     <option value="inactive">Pasif</option>
@@ -173,8 +237,10 @@ export function UsersPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn secondary" onClick={() => setEditingUser(null)}>İptal</button>
-              <button className="btn primary" onClick={handleSaveUser}>Kaydet</button>
+              <button className="btn secondary" onClick={() => setEditingUser(null)} disabled={saving}>İptal</button>
+              <button className="btn primary" onClick={handleSaveUser} disabled={saving}>
+                {saving ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
             </div>
           </div>
         </div>

@@ -1,14 +1,16 @@
-// Admin Panel Types
+// Admin panel için tip tanımları
+// Not: Bu tipler artık AdminContext.tsx'de tanımlanıyor
+// Bu dosya geriye dönük uyumluluk için korunuyor
 
 export interface User {
   id: string;
   email: string;
-  name: string;
-  phone?: string;
+  name: string | null;
+  phone?: string | null;
   plan: 'free' | 'pro' | 'business';
   hasPurchased: boolean;
   createdAt: string;
-  lastLogin?: string;
+  lastLogin?: string | null;
   cvCount: number;
   status: 'active' | 'inactive' | 'banned';
 }
@@ -21,7 +23,7 @@ export interface Subscription {
   plan: 'pro' | 'business';
   billingCycle: 'monthly' | 'yearly';
   amount: number;
-  status: 'active' | 'cancelled' | 'expired';
+  status: 'active' | 'cancelled' | 'expired' | 'pending';
   startDate: string;
   endDate: string;
   autoRenew: boolean;
@@ -29,14 +31,14 @@ export interface Subscription {
 
 export interface Payment {
   id: string;
-  userId: string;
+  userId: string | null;
   userName: string;
   userEmail: string;
   type: 'subscription' | 'one-time';
   amount: number;
   status: 'completed' | 'pending' | 'failed' | 'refunded';
   date: string;
-  method: 'credit_card' | 'bank_transfer' | 'paypal';
+  method: 'credit_card' | 'bank_transfer' | 'paypal' | 'stripe' | null;
 }
 
 export interface SiteSettings {
@@ -49,10 +51,10 @@ export interface SiteSettings {
   contactEmail: string;
   contactPhone: string;
   socialLinks: {
-    facebook?: string;
-    twitter?: string;
-    instagram?: string;
-    linkedin?: string;
+    facebook: string;
+    twitter: string;
+    instagram: string;
+    linkedin: string;
   };
   footerText: string;
   maintenanceMode: boolean;
@@ -88,12 +90,4 @@ export interface Template {
   isActive: boolean;
   isPremium: boolean;
   usageCount: number;
-}
-
-export interface AdminUser {
-  id: string;
-  email: string;
-  name: string;
-  role: 'super_admin' | 'admin' | 'moderator';
-  lastLogin?: string;
 }

@@ -1,58 +1,150 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { User, Subscription, Payment, SiteSettings, PricingPlan, DashboardStats, Template } from '../types';
-import { mockUsers, mockSubscriptions, mockPayments, mockSiteSettings, mockPricingPlans, mockDashboardStats, mockTemplates } from '../data/mockData';
+import {
+  profilesService,
+  subscriptionsService,
+  paymentsService,
+  siteSettingsService,
+  dashboardService,
+  templatesService,
+  pricingPlansService,
+  type Profile,
+  type Subscription,
+  type Payment,
+  type SiteSettings,
+  type PricingPlan,
+  type Template,
+} from '../../lib/database';
+
+// Admin panel için tip tanımları
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  plan: 'free' | 'pro' | 'business';
+  hasPurchased: boolean;
+  createdAt: string;
+  lastLogin: string | null;
+  cvCount: number;
+  status: 'active' | 'inactive' | 'banned';
+}
+
+export interface AdminSubscription {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  plan: 'pro' | 'business';
+  billingCycle: 'monthly' | 'yearly';
+  amount: number;
+  status: 'active' | 'cancelled' | 'expired' | 'pending';
+  startDate: string;
+  endDate: string;
+  autoRenew: boolean;
+  stripeSubscriptionId: string | null;
+}
+
+export interface AdminPayment {
+  id: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  type: 'subscription' | 'one-time';
+  amount: number;
+  status: 'completed' | 'pending' | 'failed' | 'refunded';
+  date: string;
+  method: string | null;
+  stripePaymentId: string | null;
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  activeSubscriptions: number;
+  totalRevenue: number;
+  monthlyRevenue: number;
+  newUsersToday: number;
+  newUsersThisWeek: number;
+  conversionRate: number;
+  churnRate: number;
+}
 
 interface AdminContextType {
   // Auth
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   
+  // Loading states
+  loading: boolean;
+  
   // Users
-  users: User[];
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
+  users: AdminUser[];
+  loadUsers: () => Promise<void>;
+  updateUser: (id: string, updates: Partial<Profile>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
   
   // Subscriptions
-  subscriptions: Subscription[];
-  updateSubscription: (id: string, updates: Partial<Subscription>) => void;
-  cancelSubscription: (id: string) => void;
+  subscriptions: AdminSubscription[];
+  loadSubscriptions: () => Promise<void>;
+  updateSubscription: (id: string, updates: Partial<Subscription>) => Promise<void>;
+  cancelSubscription: (id: string) => Promise<void>;
   
   // Payments
-  payments: Payment[];
-  refundPayment: (id: string) => void;
+  payments: AdminPayment[];
+  loadPayments: () => Promise<void>;
+  refundPayment: (id: string) => Promise<void>;
   
   // Site Settings
-  siteSettings: SiteSettings;
-  updateSiteSettings: (updates: Partial<SiteSettings>) => void;
+  siteSettings: SiteSettings | null;
+  loadSiteSettings: () => Promise<void>;
+  updateSiteSettings: (updates: Partial<SiteSettings>) => Promise<void>;
   
   // Pricing Plans
   pricingPlans: PricingPlan[];
-  updatePricingPlan: (id: string, updates: Partial<PricingPlan>) => void;
+  loadPricingPlans: () => Promise<void>;
+  updatePricingPlan: (id: string, updates: Partial<PricingPlan>) => Promise<void>;
   
   // Dashboard
   dashboardStats: DashboardStats;
+  loadDashboardStats: () => Promise<void>;
   
   // Templates
   templates: Template[];
-  updateTemplate: (id: string, updates: Partial<Template>) => void;
+  loadTemplates: () => Promise<void>;
+  updateTemplate: (id: string, updates: Partial<Template>) => Promise<void>;
+  
+  // Refresh all data
+  refreshAll: () => Promise<void>;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 const ADMIN_AUTH_KEY = 'cv-admin-auth';
 
+const defaultStats: DashboardStats = {
+  totalUsers: 0,
+  activeSubscriptions: 0,
+  totalRevenue: 0,
+  monthlyRevenue: 0,
+  newUsersToday: 0,
+  newUsersThisWeek: 0,
+  conversionRate: 0,
+  churnRate: 0,
+};
+
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(mockSubscriptions);
-  const [payments, setPayments] = useState<Payment[]>(mockPayments);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings>(mockSiteSettings);
-  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>(mockPricingPlans);
-  const [dashboardStats] = useState<DashboardStats>(mockDashboardStats);
-  const [templates, setTemplates] = useState<Template[]>(mockTemplates);
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [subscriptions, setSubscriptions] = useState<AdminSubscription[]>([]);
+  const [payments, setPayments] = useState<AdminPayment[]>([]);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(defaultStats);
+  const [templates, setTemplates] = useState<Template[]>([]);
 
+  // Check auth on mount
   useEffect(() => {
     const auth = localStorage.getItem(ADMIN_AUTH_KEY);
     if (auth === 'true') {
@@ -60,8 +152,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = (email: string, password: string): boolean => {
+  // Load all data when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshAll();
+    }
+  }, [isAuthenticated]);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
     // Demo: admin@cvmaker.com / admin123
+    // TODO: Gerçek admin auth implementasyonu
     if (email === 'admin@cvmaker.com' && password === 'admin123') {
       setIsAuthenticated(true);
       localStorage.setItem(ADMIN_AUTH_KEY, 'true');
@@ -75,48 +175,272 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(ADMIN_AUTH_KEY);
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+  // =====================================================
+  // USERS
+  // =====================================================
+  const loadUsers = useCallback(async () => {
+    try {
+      const { data, error } = await profilesService.getAllProfiles();
+      if (error) throw error;
+      
+      const adminUsers: AdminUser[] = (data || []).map(profile => ({
+        id: profile.id,
+        email: profile.email,
+        name: profile.name,
+        phone: profile.phone,
+        plan: profile.plan,
+        hasPurchased: profile.has_purchased,
+        createdAt: profile.created_at.split('T')[0],
+        lastLogin: profile.last_login?.split('T')[0] || null,
+        cvCount: profile.cv_count,
+        status: profile.status,
+      }));
+      
+      setUsers(adminUsers);
+    } catch (error) {
+      console.error('Kullanıcılar yüklenirken hata:', error);
+    }
+  }, []);
+
+  const updateUser = async (id: string, updates: Partial<Profile>) => {
+    try {
+      const { error } = await profilesService.updateProfile(id, updates);
+      if (error) throw error;
+      await loadUsers();
+    } catch (error) {
+      console.error('Kullanıcı güncellenirken hata:', error);
+      throw error;
+    }
   };
 
-  const deleteUser = (id: string) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
+  const deleteUser = async (id: string) => {
+    try {
+      // Soft delete - status'u banned yap
+      const { error } = await profilesService.updateProfile(id, { status: 'banned' });
+      if (error) throw error;
+      await loadUsers();
+    } catch (error) {
+      console.error('Kullanıcı silinirken hata:', error);
+      throw error;
+    }
   };
 
-  const updateSubscription = (id: string, updates: Partial<Subscription>) => {
-    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  // =====================================================
+  // SUBSCRIPTIONS
+  // =====================================================
+  const loadSubscriptions = useCallback(async () => {
+    try {
+      const { data, error } = await subscriptionsService.getAllSubscriptions();
+      if (error) throw error;
+      
+      const adminSubs: AdminSubscription[] = (data || []).map(sub => ({
+        id: sub.id,
+        userId: sub.user_id,
+        userName: sub.profiles?.name || 'Bilinmiyor',
+        userEmail: sub.profiles?.email || 'Bilinmiyor',
+        plan: sub.plan,
+        billingCycle: sub.billing_cycle,
+        amount: sub.amount,
+        status: sub.status,
+        startDate: sub.start_date.split('T')[0],
+        endDate: sub.end_date.split('T')[0],
+        autoRenew: sub.auto_renew,
+        stripeSubscriptionId: sub.stripe_subscription_id,
+      }));
+      
+      setSubscriptions(adminSubs);
+    } catch (error) {
+      console.error('Abonelikler yüklenirken hata:', error);
+    }
+  }, []);
+
+  const updateSubscription = async (id: string, updates: Partial<Subscription>) => {
+    try {
+      const { error } = await subscriptionsService.updateSubscription(id, updates);
+      if (error) throw error;
+      await loadSubscriptions();
+    } catch (error) {
+      console.error('Abonelik güncellenirken hata:', error);
+      throw error;
+    }
   };
 
-  const cancelSubscription = (id: string) => {
-    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, status: 'cancelled', autoRenew: false } : s));
+  const cancelSubscription = async (id: string) => {
+    try {
+      const { error } = await subscriptionsService.cancelSubscription(id);
+      if (error) throw error;
+      await loadSubscriptions();
+    } catch (error) {
+      console.error('Abonelik iptal edilirken hata:', error);
+      throw error;
+    }
   };
 
-  const refundPayment = (id: string) => {
-    setPayments(prev => prev.map(p => p.id === id ? { ...p, status: 'refunded' } : p));
+  // =====================================================
+  // PAYMENTS
+  // =====================================================
+  const loadPayments = useCallback(async () => {
+    try {
+      const { data, error } = await paymentsService.getAllPayments();
+      if (error) throw error;
+      
+      const adminPayments: AdminPayment[] = (data || []).map(payment => ({
+        id: payment.id,
+        userId: payment.user_id,
+        userName: payment.profiles?.name || 'Misafir',
+        userEmail: payment.profiles?.email || 'Bilinmiyor',
+        type: payment.type,
+        amount: payment.amount,
+        status: payment.status,
+        date: payment.created_at.split('T')[0],
+        method: payment.method,
+        stripePaymentId: payment.stripe_payment_id,
+      }));
+      
+      setPayments(adminPayments);
+    } catch (error) {
+      console.error('Ödemeler yüklenirken hata:', error);
+    }
+  }, []);
+
+  const refundPayment = async (id: string) => {
+    try {
+      const { error } = await paymentsService.updatePayment(id, { status: 'refunded' });
+      if (error) throw error;
+      await loadPayments();
+    } catch (error) {
+      console.error('Ödeme iade edilirken hata:', error);
+      throw error;
+    }
   };
 
-  const updateSiteSettings = (updates: Partial<SiteSettings>) => {
-    setSiteSettings(prev => ({ ...prev, ...updates }));
+  // =====================================================
+  // SITE SETTINGS
+  // =====================================================
+  const loadSiteSettings = useCallback(async () => {
+    try {
+      const { data, error } = await siteSettingsService.getSettings();
+      if (error) throw error;
+      setSiteSettings(data);
+    } catch (error) {
+      console.error('Site ayarları yüklenirken hata:', error);
+    }
+  }, []);
+
+  const updateSiteSettings = async (updates: Partial<SiteSettings>) => {
+    try {
+      const { data, error } = await siteSettingsService.updateSettings(updates);
+      if (error) throw error;
+      setSiteSettings(data);
+    } catch (error) {
+      console.error('Site ayarları güncellenirken hata:', error);
+      throw error;
+    }
   };
 
-  const updatePricingPlan = (id: string, updates: Partial<PricingPlan>) => {
-    setPricingPlans(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  // =====================================================
+  // PRICING PLANS
+  // =====================================================
+  const loadPricingPlans = useCallback(async () => {
+    try {
+      const { data, error } = await pricingPlansService.getAllPlans();
+      if (error) throw error;
+      setPricingPlans(data || []);
+    } catch (error) {
+      console.error('Fiyat planları yüklenirken hata:', error);
+    }
+  }, []);
+
+  const updatePricingPlan = async (id: string, updates: Partial<PricingPlan>) => {
+    try {
+      const { error } = await pricingPlansService.updatePlan(id, updates);
+      if (error) throw error;
+      await loadPricingPlans();
+    } catch (error) {
+      console.error('Fiyat planı güncellenirken hata:', error);
+      throw error;
+    }
   };
 
-  const updateTemplate = (id: string, updates: Partial<Template>) => {
-    setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  // =====================================================
+  // DASHBOARD STATS
+  // =====================================================
+  const loadDashboardStats = useCallback(async () => {
+    try {
+      const stats = await dashboardService.getStats();
+      setDashboardStats({
+        totalUsers: stats.totalUsers,
+        activeSubscriptions: stats.activeSubscriptions,
+        totalRevenue: stats.totalRevenue,
+        monthlyRevenue: stats.monthlyRevenue,
+        newUsersToday: stats.newUsersToday,
+        newUsersThisWeek: stats.newUsersThisWeek,
+        conversionRate: parseFloat(stats.conversionRate as string) || 0,
+        churnRate: stats.churnRate,
+      });
+    } catch (error) {
+      console.error('Dashboard istatistikleri yüklenirken hata:', error);
+    }
+  }, []);
+
+  // =====================================================
+  // TEMPLATES
+  // =====================================================
+  const loadTemplates = useCallback(async () => {
+    try {
+      const { data, error } = await templatesService.getAllTemplates();
+      if (error) throw error;
+      setTemplates(data || []);
+    } catch (error) {
+      console.error('Şablonlar yüklenirken hata:', error);
+    }
+  }, []);
+
+  const updateTemplate = async (id: string, updates: Partial<Template>) => {
+    try {
+      const { error } = await templatesService.updateTemplate(id, updates);
+      if (error) throw error;
+      await loadTemplates();
+    } catch (error) {
+      console.error('Şablon güncellenirken hata:', error);
+      throw error;
+    }
   };
+
+  // =====================================================
+  // REFRESH ALL
+  // =====================================================
+  const refreshAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        loadUsers(),
+        loadSubscriptions(),
+        loadPayments(),
+        loadSiteSettings(),
+        loadPricingPlans(),
+        loadDashboardStats(),
+        loadTemplates(),
+      ]);
+    } catch (error) {
+      console.error('Veriler yüklenirken hata:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadUsers, loadSubscriptions, loadPayments, loadSiteSettings, loadPricingPlans, loadDashboardStats, loadTemplates]);
 
   return (
     <AdminContext.Provider value={{
       isAuthenticated, login, logout,
-      users, updateUser, deleteUser,
-      subscriptions, updateSubscription, cancelSubscription,
-      payments, refundPayment,
-      siteSettings, updateSiteSettings,
-      pricingPlans, updatePricingPlan,
-      dashboardStats,
-      templates, updateTemplate,
+      loading,
+      users, loadUsers, updateUser, deleteUser,
+      subscriptions, loadSubscriptions, updateSubscription, cancelSubscription,
+      payments, loadPayments, refundPayment,
+      siteSettings, loadSiteSettings, updateSiteSettings,
+      pricingPlans, loadPricingPlans, updatePricingPlan,
+      dashboardStats, loadDashboardStats,
+      templates, loadTemplates, updateTemplate,
+      refreshAll,
     }}>
       {children}
     </AdminContext.Provider>

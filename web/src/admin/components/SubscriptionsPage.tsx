@@ -1,13 +1,18 @@
-import { useState } from 'react';
-import { useAdmin } from '../context/AdminContext';
-import type { Subscription } from '../types';
+import { useState, useEffect } from 'react';
+import { useAdmin, type AdminSubscription } from '../context/AdminContext';
 
 export function SubscriptionsPage() {
-  const { subscriptions, updateSubscription, cancelSubscription } = useAdmin();
+  const { subscriptions, loadSubscriptions, updateSubscription, cancelSubscription, loading } = useAdmin();
   const [search, setSearch] = useState('');
   const [filterPlan, setFilterPlan] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [editingSub, setEditingSub] = useState<Subscription | null>(null);
+  const [editingSub, setEditingSub] = useState<AdminSubscription | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadSubscriptions();
+  }, []);
 
   const filteredSubs = subscriptions.filter(sub => {
     const matchesSearch = sub.userName.toLowerCase().includes(search.toLowerCase()) ||
@@ -21,18 +26,58 @@ export function SubscriptionsPage() {
     .filter(s => s.status === 'active')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  const handleSave = () => {
-    if (editingSub) {
-      updateSubscription(editingSub.id, editingSub);
+  const handleSave = async () => {
+    if (!editingSub) return;
+    
+    setSaving(true);
+    try {
+      await updateSubscription(editingSub.id, {
+        plan: editingSub.plan,
+        billing_cycle: editingSub.billingCycle,
+        amount: editingSub.amount,
+        status: editingSub.status,
+        start_date: editingSub.startDate,
+        end_date: editingSub.endDate,
+        auto_renew: editingSub.autoRenew,
+      });
       setEditingSub(null);
+    } catch (error) {
+      alert('Abonelik güncellenirken hata oluştu');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleCancel = (id: string) => {
+  const handleCancel = async (id: string) => {
     if (confirm('Bu aboneliği iptal etmek istediğinizden emin misiniz?')) {
-      cancelSubscription(id);
+      setCancelling(id);
+      try {
+        await cancelSubscription(id);
+      } catch (error) {
+        alert('Abonelik iptal edilirken hata oluştu');
+      } finally {
+        setCancelling(null);
+      }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="page">
+        <h1>Abonelikler</h1>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '300px',
+          color: '#6b7280'
+        }}>
+          <span style={{ fontSize: '24px', marginRight: '12px' }}>⏳</span>
+          Abonelikler yükleniyor...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -41,6 +86,18 @@ export function SubscriptionsPage() {
         <div className="header-stats">
           <span className="count-badge">{subscriptions.length} abonelik</span>
           <span className="revenue-badge">₺{totalRevenue.toLocaleString()} aktif gelir</span>
+          <button 
+            onClick={loadSubscriptions}
+            style={{
+              background: '#f3f4f6',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Yenile
+          </button>
         </div>
       </div>
 
@@ -62,6 +119,7 @@ export function SubscriptionsPage() {
           <option value="active">Aktif</option>
           <option value="cancelled">İptal</option>
           <option value="expired">Süresi Dolmuş</option>
+          <option value="pending">Bekliyor</option>
         </select>
       </div>
 
@@ -81,34 +139,51 @@ export function SubscriptionsPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredSubs.map(sub => (
-              <tr key={sub.id}>
-                <td>
-                  <div className="user-cell">
-                    <div className="avatar">{sub.userName.charAt(0)}</div>
-                    <div>
-                      <div className="name">{sub.userName}</div>
-                      <div className="email">{sub.userEmail}</div>
+            {filteredSubs.length > 0 ? (
+              filteredSubs.map(sub => (
+                <tr key={sub.id}>
+                  <td>
+                    <div className="user-cell">
+                      <div className="avatar">{sub.userName.charAt(0).toUpperCase()}</div>
+                      <div>
+                        <div className="name">{sub.userName}</div>
+                        <div className="email">{sub.userEmail}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td><span className={`plan-badge ${sub.plan}`}>{sub.plan}</span></td>
-                <td>{sub.billingCycle === 'monthly' ? 'Aylık' : 'Yıllık'}</td>
-                <td>₺{sub.amount}</td>
-                <td>{sub.startDate}</td>
-                <td>{sub.endDate}</td>
-                <td>{sub.autoRenew ? <span className="badge success">Evet</span> : <span className="badge">Hayır</span>}</td>
-                <td><span className={`status-badge ${sub.status}`}>{sub.status}</span></td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="btn-icon" onClick={() => setEditingSub(sub)} title="Düzenle">✏️</button>
-                    {sub.status === 'active' && (
-                      <button className="btn-icon danger" onClick={() => handleCancel(sub.id)} title="İptal Et">❌</button>
-                    )}
-                  </div>
+                  </td>
+                  <td><span className={`plan-badge ${sub.plan}`}>{sub.plan}</span></td>
+                  <td>{sub.billingCycle === 'monthly' ? 'Aylık' : 'Yıllık'}</td>
+                  <td>₺{sub.amount}</td>
+                  <td>{sub.startDate}</td>
+                  <td>{sub.endDate}</td>
+                  <td>{sub.autoRenew ? <span className="badge success">Evet</span> : <span className="badge">Hayır</span>}</td>
+                  <td><span className={`status-badge ${sub.status}`}>{sub.status}</span></td>
+                  <td>
+                    <div className="action-buttons">
+                      <button className="btn-icon" onClick={() => setEditingSub(sub)} title="Düzenle">✏️</button>
+                      {sub.status === 'active' && (
+                        <button 
+                          className="btn-icon danger" 
+                          onClick={() => handleCancel(sub.id)} 
+                          title="İptal Et"
+                          disabled={cancelling === sub.id}
+                        >
+                          {cancelling === sub.id ? '⏳' : '❌'}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                  {search || filterPlan !== 'all' || filterStatus !== 'all' 
+                    ? 'Filtrelere uygun abonelik bulunamadı' 
+                    : 'Henüz abonelik yok'}
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -160,11 +235,12 @@ export function SubscriptionsPage() {
                   <label>Durum</label>
                   <select
                     value={editingSub.status}
-                    onChange={e => setEditingSub({ ...editingSub, status: e.target.value as Subscription['status'] })}
+                    onChange={e => setEditingSub({ ...editingSub, status: e.target.value as AdminSubscription['status'] })}
                   >
                     <option value="active">Aktif</option>
                     <option value="cancelled">İptal</option>
                     <option value="expired">Süresi Dolmuş</option>
+                    <option value="pending">Bekliyor</option>
                   </select>
                 </div>
               </div>
@@ -198,8 +274,10 @@ export function SubscriptionsPage() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn secondary" onClick={() => setEditingSub(null)}>İptal</button>
-              <button className="btn primary" onClick={handleSave}>Kaydet</button>
+              <button className="btn secondary" onClick={() => setEditingSub(null)} disabled={saving}>İptal</button>
+              <button className="btn primary" onClick={handleSave} disabled={saving}>
+                {saving ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
             </div>
           </div>
         </div>
