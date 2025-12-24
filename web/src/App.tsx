@@ -178,8 +178,8 @@ function App() {
         // Profil bilgisini al
         const { data: profile } = await profilesService.getProfile(user.id);
         if (profile) {
-          setPlan(profile.plan as PlanType);
-          setHasPurchased(profile.has_purchased);
+          setPlan((profile.plan as PlanType) || 'free');
+          setHasPurchased(profile.has_purchased === true);
         }
         
         // Aktif abonelik kontrolü
