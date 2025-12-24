@@ -58,22 +58,6 @@ function loadSavedData(): { cvData: CVData; template: TemplateName; language: La
   return { cvData: initialData, template: 'classic', language: 'en' };
 }
 
-function loadUserData(): { plan: PlanType; hasPurchased: boolean } {
-  try {
-    const saved = localStorage.getItem(USER_STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        plan: parsed.plan || 'free',
-        hasPurchased: parsed.hasPurchased || false,
-      };
-    }
-  } catch {
-    console.log('No user data found');
-  }
-  return { plan: 'free', hasPurchased: false };
-}
-
 // CV verisini veritabanı formatına dönüştür
 function cvDataToDbFormat(cvData: CVData, template: TemplateName, language: Language) {
   return {
@@ -126,8 +110,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<string>('personal');
   const [showMobilePreview, setShowMobilePreview] = useState(false);
   
-  // User/Payment state
-  const [plan, setPlan] = useState<PlanType>(() => loadUserData().plan);
+  // User/Payment state - Başlangıçta free/false, veritabanından güncellenecek
+  const [plan, setPlan] = useState<PlanType>('free');
   const [hasPurchased, setHasPurchased] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
