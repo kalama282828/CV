@@ -25,8 +25,12 @@ serve(async (req: Request) => {
   }
 
   try {
+    console.log('=== create-checkout-session started ===');
+    
     // Get Stripe secret key from environment
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    console.log('STRIPE_SECRET_KEY exists:', !!stripeSecretKey);
+    
     if (!stripeSecretKey) {
       throw new Error('STRIPE_SECRET_KEY not configured');
     }
@@ -36,10 +40,12 @@ serve(async (req: Request) => {
       apiVersion: '2023-10-16',
       httpClient: Stripe.createFetchHttpClient(),
     });
+    console.log('Stripe initialized');
 
     // Parse request body
     const body: RequestBody = await req.json();
     const { priceAmount, userEmail, successUrl, cancelUrl, userId } = body;
+    console.log('Request body:', { priceAmount, userEmail, successUrl, cancelUrl, userId });
 
     // Validate required fields
     if (!priceAmount || priceAmount <= 0) {
@@ -49,8 +55,13 @@ serve(async (req: Request) => {
       throw new Error('Success and cancel URLs are required');
     }
 
+    // Validate email if provided
+    const validEmail = userEmail && userEmail.includes('@') ? userEmail : undefined;
+    console.log('Valid email:', validEmail);
+
     // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    console.log('Creating Stripe checkout session...');
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       mode: 'payment',
       line_items: [
@@ -66,26 +77,36 @@ serve(async (req: Request) => {
           quantity: 1,
         },
       ],
-      customer_email: userEmail,
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl,
       metadata: {
         userId: userId || '',
-        userEmail: userEmail || '',
+        userEmail: validEmail || '',
       },
-    });
+    };
+
+    // Only add customer_email if valid
+    if (validEmail) {
+      sessionParams.customer_email = validEmail;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+    console.log('Stripe session created:', session.id);
 
     // Initialize Supabase client to save payment record
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    console.log('Supabase URL exists:', !!supabaseUrl);
+    console.log('Supabase Service Key exists:', !!supabaseServiceKey);
     
     if (supabaseUrl && supabaseServiceKey) {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       
       // Create payment record with pending status
-      await supabase.from('payments').insert({
+      console.log('Inserting payment record...');
+      const { error: insertError } = await supabase.from('payments').insert({
         session_id: session.id,
-        email: userEmail || 'unknown',
+        email: validEmail || 'guest@checkout.stripe.com',
         amount: priceAmount,
         currency: 'try',
         user_id: userId || null,
@@ -94,9 +115,18 @@ serve(async (req: Request) => {
           stripe_session_id: session.id,
         },
       });
+      
+      if (insertError) {
+        // Log error but don't fail - payment can still proceed
+        console.error('Failed to insert payment record:', insertError);
+        console.error('Insert error details:', JSON.stringify(insertError));
+      } else {
+        console.log('Payment record inserted successfully');
+      }
     }
 
     // Return session details
+    console.log('Returning success response with URL:', session.url);
     return new Response(
       JSON.stringify({
         sessionId: session.id,
@@ -108,11 +138,15 @@ serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('=== ERROR in create-checkout-session ===');
+    console.error('Error type:', error?.constructor?.name);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.stack : undefined,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

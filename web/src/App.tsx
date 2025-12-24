@@ -11,6 +11,7 @@ import { TemplateSelector } from './components/TemplateSelector';
 import { PaymentModal } from './components/PaymentModal';
 import { StripeTestBanner } from './components/StripeTestBanner';
 import { useSiteSettings } from './context/SiteSettingsContext';
+import { useAuth } from './context/AuthContext';
 import { stripePaymentsService } from './lib/database';
 import './App.css';
 
@@ -75,6 +76,7 @@ function loadUserData(): { plan: PlanType; hasPurchased: boolean } {
 
 function App() {
   const { settings } = useSiteSettings();
+  const { user } = useAuth();
   const [cvData, setCvData] = useState<CVData>(() => loadSavedData().cvData);
   const [template, setTemplate] = useState<TemplateName>(() => loadSavedData().template);
   const [language, setLanguage] = useState<Language>(() => loadSavedData().language);
@@ -83,11 +85,12 @@ function App() {
   
   // User/Payment state
   const [plan, _setPlan] = useState<PlanType>(() => loadUserData().plan);
-  const [hasPurchased, setHasPurchased] = useState(() => loadUserData().hasPurchased);
+  const [hasPurchased, setHasPurchased] = useState(false); // Start with false, check from DB
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [paymentChecked, setPaymentChecked] = useState(false);
 
-  // Check payment status on mount
+  // Check payment status on mount and when user changes
   useEffect(() => {
     const checkPayment = async () => {
       // Check URL for payment success
@@ -99,24 +102,28 @@ function App() {
         const payment = await stripePaymentsService.getPaymentBySessionId(sessionId);
         if (payment.data?.status === 'completed') {
           setHasPurchased(true);
+          setPaymentChecked(true);
           // Clean URL
           window.history.replaceState({}, '', window.location.pathname);
+          return;
         }
       }
       
-      // Also check by email if available
-      const savedEmail = localStorage.getItem('cv-user-email');
-      if (savedEmail) {
-        setUserEmail(savedEmail);
-        const hasPayment = await stripePaymentsService.checkPaymentStatus(savedEmail);
-        if (hasPayment) {
-          setHasPurchased(true);
-        }
+      // Get email from auth user or localStorage
+      const email = user?.email || localStorage.getItem('cv-user-email');
+      if (email) {
+        setUserEmail(email);
+        localStorage.setItem('cv-user-email', email);
+        const hasPayment = await stripePaymentsService.checkPaymentStatus(email);
+        setHasPurchased(hasPayment);
+      } else {
+        setHasPurchased(false);
       }
+      setPaymentChecked(true);
     };
     
     checkPayment();
-  }, []);
+  }, [user]);
 
   // Auto-save CV data
   useEffect(() => {
@@ -129,6 +136,9 @@ function App() {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify({ plan, hasPurchased }));
   }, [plan, hasPurchased]);
 
+  // Debug: Log payment status
+  console.log('Payment status:', { plan, hasPurchased, paymentChecked, userEmail: userEmail || user?.email, canExportPDF: plan === 'pro' || plan === 'business' || hasPurchased });
+  
   const canExportPDF = plan === 'pro' || plan === 'business' || hasPurchased;
 
   const tabs = [
