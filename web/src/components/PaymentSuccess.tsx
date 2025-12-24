@@ -1,69 +1,103 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { stripePaymentsService } from '../lib/database';
+import { stripePaymentsService, profilesService, subscriptionsService } from '../lib/database';
+import { useAuth } from '../context/AuthContext';
 
 export function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [countdown, setCountdown] = useState(5);
+  const [paymentType, setPaymentType] = useState<'one-time' | 'subscription'>('one-time');
+  const [planName, setPlanName] = useState<string>('');
 
   useEffect(() => {
     const verifyPayment = async () => {
       const sessionId = searchParams.get('session_id');
+      const type = searchParams.get('type');
+      const plan = searchParams.get('plan');
       
       if (!sessionId) {
         setStatus('error');
         return;
       }
 
+      // Ödeme tipini belirle
+      if (type === 'subscription') {
+        setPaymentType('subscription');
+        setPlanName(plan === 'business' ? 'İşletme' : 'Pro');
+      }
+
       try {
-        // Check payment status
-        const { data: payment } = await stripePaymentsService.getPaymentBySessionId(sessionId);
-        
-        if (payment?.status === 'completed') {
+        if (type === 'subscription' && plan) {
+          // Abonelik ödemesi
           setStatus('success');
-          // Save to localStorage
+          
+          // Kullanıcı profilini güncelle
+          if (user?.id) {
+            await profilesService.updateProfile(user.id, { 
+              plan: plan as 'pro' | 'business',
+              has_purchased: true 
+            });
+            
+            // Abonelik kaydını güncelle
+            const { data: subscription } = await subscriptionsService.getUserSubscription(user.id);
+            if (subscription) {
+              await subscriptionsService.updateSubscription(subscription.id, { 
+                status: 'active',
+                stripe_subscription_id: sessionId 
+              });
+            }
+          }
+          
           localStorage.setItem('cv-user-data', JSON.stringify({ 
-            plan: 'free', 
+            plan: plan, 
             hasPurchased: true 
           }));
-          if (payment.email) {
-            localStorage.setItem('cv-user-email', payment.email);
-          }
         } else {
-          // Payment might still be processing, wait a bit
-          setTimeout(async () => {
-            const { data: retryPayment } = await stripePaymentsService.getPaymentBySessionId(sessionId);
-            if (retryPayment?.status === 'completed') {
-              setStatus('success');
-              localStorage.setItem('cv-user-data', JSON.stringify({ 
-                plan: 'free', 
-                hasPurchased: true 
-              }));
-            } else {
-              // Still pending, but show success (webhook will update)
-              setStatus('success');
-              localStorage.setItem('cv-user-data', JSON.stringify({ 
-                plan: 'free', 
-                hasPurchased: true 
-              }));
+          // Tek seferlik ödeme
+          const { data: payment } = await stripePaymentsService.getPaymentBySessionId(sessionId);
+          
+          if (payment?.status === 'completed') {
+            setStatus('success');
+            if (user?.id) {
+              await profilesService.updateProfile(user.id, { has_purchased: true });
             }
-          }, 2000);
+            localStorage.setItem('cv-user-data', JSON.stringify({ 
+              plan: 'free', 
+              hasPurchased: true 
+            }));
+            if (payment.email) {
+              localStorage.setItem('cv-user-email', payment.email);
+            }
+          } else {
+            // Ödeme hala işleniyor olabilir, biraz bekle
+            setTimeout(async () => {
+              setStatus('success');
+              if (user?.id) {
+                await profilesService.updateProfile(user.id, { has_purchased: true });
+              }
+              localStorage.setItem('cv-user-data', JSON.stringify({ 
+                plan: 'free', 
+                hasPurchased: true 
+              }));
+            }, 2000);
+          }
         }
       } catch (error) {
         console.error('Error verifying payment:', error);
-        // Show success anyway, webhook will handle the actual status
+        // Yine de başarılı göster, webhook durumu güncelleyecek
         setStatus('success');
         localStorage.setItem('cv-user-data', JSON.stringify({ 
-          plan: 'free', 
+          plan: paymentType === 'subscription' ? (plan || 'pro') : 'free', 
           hasPurchased: true 
         }));
       }
     };
 
     verifyPayment();
-  }, [searchParams]);
+  }, [searchParams, user, paymentType]);
 
   // Countdown and redirect
   useEffect(() => {
@@ -118,13 +152,15 @@ export function PaymentSuccess() {
               marginBottom: '16px',
               animation: 'bounce 0.5s ease'
             }}>
-              ✅
+              {paymentType === 'subscription' ? '⭐' : '✅'}
             </div>
             <h1 style={{ fontSize: '24px', color: '#059669', marginBottom: '8px' }}>
-              Ödeme Başarılı!
+              {paymentType === 'subscription' ? `${planName} Aboneliği Aktif!` : 'Ödeme Başarılı!'}
             </h1>
             <p style={{ color: '#6b7280', marginBottom: '24px' }}>
-              PDF indirme özelliği aktif edildi.
+              {paymentType === 'subscription' 
+                ? 'Artık sınırsız PDF indirebilirsiniz!' 
+                : 'PDF indirme özelliği aktif edildi.'}
             </p>
             <div style={{
               background: '#f0fdf4',
@@ -133,7 +169,9 @@ export function PaymentSuccess() {
               marginBottom: '24px'
             }}>
               <p style={{ color: '#059669', fontSize: '14px' }}>
-                🎉 Artık CV'nizi PDF olarak indirebilirsiniz!
+                {paymentType === 'subscription' 
+                  ? '🎉 Premium özelliklerin keyfini çıkarın!' 
+                  : '🎉 Artık CV\'nizi PDF olarak indirebilirsiniz!'}
               </p>
             </div>
             <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '16px' }}>

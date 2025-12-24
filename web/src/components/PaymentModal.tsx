@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { startCheckout, getStripePublishableKey, isStripeTestMode } from '../lib/stripe';
+import { startCheckout, startSubscriptionCheckout, getStripePublishableKey, isStripeTestMode, type SubscriptionPlan } from '../lib/stripe';
+
+export type PaymentType = 'one-time' | 'subscription';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -9,6 +11,8 @@ interface PaymentModalProps {
   amount?: number;
   planName?: string;
   userEmail?: string;
+  paymentType?: PaymentType;
+  subscriptionPlan?: SubscriptionPlan;
 }
 
 export function PaymentModal({ 
@@ -18,13 +22,16 @@ export function PaymentModal({
   price,
   amount,
   planName = 'CV İndirme',
-  userEmail 
+  userEmail,
+  paymentType = 'one-time',
+  subscriptionPlan
 }: PaymentModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Use amount if provided, otherwise fall back to price, then default to 50
   const finalPrice = amount ?? price ?? 50;
+  const isSubscription = paymentType === 'subscription';
 
   if (!isOpen) return null;
 
@@ -43,14 +50,25 @@ export function PaymentModal({
     try {
       const currentUrl = window.location.origin;
       
-      await startCheckout({
-        priceAmount: finalPrice,
-        userEmail,
-        successUrl: `${currentUrl}/payment/success`,
-        cancelUrl: `${currentUrl}/payment/cancel`,
-      });
+      if (isSubscription && subscriptionPlan) {
+        // Aylık abonelik ödemesi
+        await startSubscriptionCheckout({
+          plan: subscriptionPlan,
+          priceAmount: finalPrice,
+          userEmail,
+          successUrl: `${currentUrl}/payment/success?type=subscription&plan=${subscriptionPlan}`,
+          cancelUrl: `${currentUrl}/payment/cancel`,
+        });
+      } else {
+        // Tek seferlik ödeme
+        await startCheckout({
+          priceAmount: finalPrice,
+          userEmail,
+          successUrl: `${currentUrl}/payment/success`,
+          cancelUrl: `${currentUrl}/payment/cancel`,
+        });
+      }
       
-      // If we get here, redirect didn't happen (shouldn't normally reach this)
       onPaymentSuccess?.();
     } catch (err) {
       console.error('Payment error:', err);
@@ -87,35 +105,62 @@ export function PaymentModal({
           </div>
         )}
         
-        <div className="modal-icon">📄</div>
+        <div className="modal-icon">{isSubscription ? '⭐' : '📄'}</div>
         
         <h2>{planName}</h2>
-        <p className="modal-subtitle">Tek Seferlik Premium</p>
+        <p className="modal-subtitle">
+          {isSubscription ? 'Aylık Abonelik' : 'Tek Seferlik Premium'}
+        </p>
         
         {/* Price Card */}
         <div className="price-card">
           <div className="price-amount">₺{finalPrice}</div>
-          <div className="price-badge">TEK SEFERLİK</div>
+          <div className="price-badge">
+            {isSubscription ? 'AYLIK' : 'TEK SEFERLİK'}
+          </div>
         </div>
         
         {/* Features */}
         <div className="feature-grid">
-          <div className="feature-item blue">
-            <span className="feature-icon">📄</span>
-            <span>PDF İndirme</span>
-          </div>
-          <div className="feature-item purple">
-            <span className="feature-icon">⊞</span>
-            <span>Tüm Şablonlar</span>
-          </div>
-          <div className="feature-item green">
-            <span className="feature-icon">✏️</span>
-            <span>Sınırsız Düzenleme</span>
-          </div>
-          <div className="feature-item yellow">
-            <span className="feature-icon">✓</span>
-            <span>ATS Uyumlu</span>
-          </div>
+          {isSubscription ? (
+            <>
+              <div className="feature-item blue">
+                <span className="feature-icon">∞</span>
+                <span>Sınırsız PDF</span>
+              </div>
+              <div className="feature-item purple">
+                <span className="feature-icon">⭐</span>
+                <span>Premium Şablonlar</span>
+              </div>
+              <div className="feature-item green">
+                <span className="feature-icon">🚀</span>
+                <span>Öncelikli Destek</span>
+              </div>
+              <div className="feature-item yellow">
+                <span className="feature-icon">🔄</span>
+                <span>İstediğin Zaman İptal</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="feature-item blue">
+                <span className="feature-icon">📄</span>
+                <span>PDF İndirme</span>
+              </div>
+              <div className="feature-item purple">
+                <span className="feature-icon">⊞</span>
+                <span>Tüm Şablonlar</span>
+              </div>
+              <div className="feature-item green">
+                <span className="feature-icon">✏️</span>
+                <span>Sınırsız Düzenleme</span>
+              </div>
+              <div className="feature-item yellow">
+                <span className="feature-icon">✓</span>
+                <span>ATS Uyumlu</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Error Message */}
@@ -150,7 +195,7 @@ export function PaymentModal({
                 Yönlendiriliyor...
               </>
             ) : (
-              <>Güvenli Ödeme →</>
+              <>{isSubscription ? 'Aboneliği Başlat →' : 'Güvenli Ödeme →'}</>
             )}
           </button>
         ) : (
@@ -169,6 +214,18 @@ export function PaymentModal({
         <div className="modal-security">
           🔒 {isStripeConfigured ? 'Stripe ile güvenli ödeme' : 'Güvenli ödeme altyapısı'}
         </div>
+
+        {/* Subscription Info */}
+        {isSubscription && (
+          <div style={{
+            marginTop: '8px',
+            fontSize: '11px',
+            color: '#6b7280',
+            textAlign: 'center'
+          }}>
+            Aboneliğinizi istediğiniz zaman iptal edebilirsiniz
+          </div>
+        )}
 
         {/* Stripe Badge */}
         {isStripeConfigured && (

@@ -56,6 +56,10 @@ export function convertFromKurus(priceKurus: number): number {
   return priceKurus / 100;
 }
 
+// =====================================================
+// TEK SEFERLİK ÖDEME (One-time payment)
+// =====================================================
+
 export interface CheckoutSessionRequest {
   priceAmount: number; // in TRY
   userEmail?: string;
@@ -101,6 +105,59 @@ export async function startCheckout(request: CheckoutSessionRequest): Promise<vo
   
   if (session.url) {
     // Direct redirect to Stripe Checkout URL
+    window.location.href = session.url;
+  } else {
+    throw new Error('No checkout URL returned from Stripe');
+  }
+}
+
+// =====================================================
+// AYLIK ABONELİK (Subscription)
+// =====================================================
+
+export type SubscriptionPlan = 'pro' | 'business';
+
+export interface SubscriptionCheckoutRequest {
+  plan: SubscriptionPlan;
+  priceAmount: number; // Monthly price in TRY
+  userEmail?: string;
+  successUrl: string;
+  cancelUrl: string;
+  userId?: string;
+}
+
+/**
+ * Create a Stripe Subscription Checkout Session
+ */
+export async function createSubscriptionCheckout(
+  request: SubscriptionCheckoutRequest
+): Promise<CheckoutSessionResponse> {
+  const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+    body: {
+      plan: request.plan,
+      priceAmount: convertToKurus(request.priceAmount),
+      userEmail: request.userEmail,
+      successUrl: request.successUrl,
+      cancelUrl: request.cancelUrl,
+      userId: request.userId,
+    },
+  });
+
+  if (error) {
+    console.error('Error creating subscription checkout:', error);
+    throw new Error(error.message || 'Failed to create subscription checkout');
+  }
+
+  return data as CheckoutSessionResponse;
+}
+
+/**
+ * Start the subscription checkout flow
+ */
+export async function startSubscriptionCheckout(request: SubscriptionCheckoutRequest): Promise<void> {
+  const session = await createSubscriptionCheckout(request);
+  
+  if (session.url) {
     window.location.href = session.url;
   } else {
     throw new Error('No checkout URL returned from Stripe');

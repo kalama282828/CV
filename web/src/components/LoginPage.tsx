@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { PaymentModal } from './PaymentModal';
+import type { SubscriptionPlan } from '../lib/stripe';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -20,10 +21,10 @@ export function LoginPage() {
   const selectedPlan = searchParams.get('plan') || localStorage.getItem('selected-plan');
 
   // Plan bilgisini göster
-  const getPlanInfo = () => {
+  const getPlanInfo = (): { name: string; price: number; isSubscription: boolean; subscriptionPlan?: SubscriptionPlan } | null => {
     switch (selectedPlan) {
-      case 'pro': return { name: 'Pro Plan', price: settings.proMonthlyPrice };
-      case 'business': return { name: 'İşletme Plan', price: settings.businessMonthlyPrice };
+      case 'pro': return { name: 'Pro Plan', price: settings.proMonthlyPrice, isSubscription: true, subscriptionPlan: 'pro' };
+      case 'business': return { name: 'İşletme Plan', price: settings.businessMonthlyPrice, isSubscription: true, subscriptionPlan: 'business' };
       default: return null;
     }
   };
@@ -253,6 +254,8 @@ export function LoginPage() {
           amount={planInfo.price}
           planName={planInfo.name}
           userEmail={email}
+          paymentType={planInfo.isSubscription ? 'subscription' : 'one-time'}
+          subscriptionPlan={planInfo.subscriptionPlan}
         />
       )}
     </div>
