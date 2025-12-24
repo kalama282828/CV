@@ -10,7 +10,6 @@ import {
   pricingPlansService,
   type Profile,
   type Subscription,
-  type Payment,
   type SiteSettings,
   type PricingPlan,
   type Template,

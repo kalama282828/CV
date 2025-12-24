@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAdmin } from '../context/AdminContext';
-import type { PricingPlan } from '../types';
+import type { PricingPlan } from '../../lib/database';
 
 export function PricingPage() {
   const { pricingPlans, updatePricingPlan } = useAdmin();
@@ -42,9 +42,9 @@ export function PricingPage() {
 
       <div className="pricing-grid">
         {pricingPlans.map(plan => (
-          <div key={plan.id} className={`pricing-card ${plan.isPopular ? 'popular' : ''} ${!plan.isActive ? 'inactive' : ''}`}>
-            {plan.isPopular && <div className="popular-badge">EN POPÜLER</div>}
-            {!plan.isActive && <div className="inactive-badge">PASİF</div>}
+          <div key={plan.id} className={`pricing-card ${plan.is_popular ? 'popular' : ''} ${!plan.is_active ? 'inactive' : ''}`}>
+            {plan.is_popular && <div className="popular-badge">EN POPÜLER</div>}
+            {!plan.is_active && <div className="inactive-badge">PASİF</div>}
             
             <h3>{plan.name}</h3>
             <p className="plan-description">{plan.description}</p>
@@ -52,11 +52,11 @@ export function PricingPage() {
             <div className="plan-prices">
               <div className="price-item">
                 <span className="price-label">Aylık</span>
-                <span className="price-value">₺{plan.monthlyPrice}</span>
+                <span className="price-value">₺{plan.monthly_price}</span>
               </div>
               <div className="price-item">
                 <span className="price-label">Yıllık</span>
-                <span className="price-value">₺{plan.yearlyPrice}</span>
+                <span className="price-value">₺{plan.yearly_price}</span>
               </div>
             </div>
 
@@ -94,7 +94,7 @@ export function PricingPage() {
                   <label>Açıklama</label>
                   <input
                     type="text"
-                    value={editingPlan.description}
+                    value={editingPlan.description || ''}
                     onChange={e => setEditingPlan({ ...editingPlan, description: e.target.value })}
                   />
                 </div>
@@ -105,16 +105,16 @@ export function PricingPage() {
                   <label>Aylık Fiyat (₺)</label>
                   <input
                     type="number"
-                    value={editingPlan.monthlyPrice}
-                    onChange={e => setEditingPlan({ ...editingPlan, monthlyPrice: parseFloat(e.target.value) })}
+                    value={editingPlan.monthly_price}
+                    onChange={e => setEditingPlan({ ...editingPlan, monthly_price: parseFloat(e.target.value) })}
                   />
                 </div>
                 <div className="form-group">
                   <label>Yıllık Fiyat (₺)</label>
                   <input
                     type="number"
-                    value={editingPlan.yearlyPrice}
-                    onChange={e => setEditingPlan({ ...editingPlan, yearlyPrice: parseFloat(e.target.value) })}
+                    value={editingPlan.yearly_price}
+                    onChange={e => setEditingPlan({ ...editingPlan, yearly_price: parseFloat(e.target.value) })}
                   />
                 </div>
               </div>
@@ -124,8 +124,8 @@ export function PricingPage() {
                   <label className="checkbox-label">
                     <input
                       type="checkbox"
-                      checked={editingPlan.isPopular}
-                      onChange={e => setEditingPlan({ ...editingPlan, isPopular: e.target.checked })}
+                      checked={editingPlan.is_popular}
+                      onChange={e => setEditingPlan({ ...editingPlan, is_popular: e.target.checked })}
                     />
                     Popüler olarak işaretle
                   </label>
@@ -134,8 +134,8 @@ export function PricingPage() {
                   <label className="checkbox-label">
                     <input
                       type="checkbox"
-                      checked={editingPlan.isActive}
-                      onChange={e => setEditingPlan({ ...editingPlan, isActive: e.target.checked })}
+                      checked={editingPlan.is_active}
+                      onChange={e => setEditingPlan({ ...editingPlan, is_active: e.target.checked })}
                     />
                     Aktif
                   </label>

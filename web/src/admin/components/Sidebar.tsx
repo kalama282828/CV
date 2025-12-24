@@ -24,7 +24,7 @@ export function Sidebar({ activeTab, setActiveTab }: Props) {
       <div className="sidebar-header">
         <div className="logo">
           <span className="logo-icon">📄</span>
-          <span className="logo-text">{siteSettings.siteName}</span>
+          <span className="logo-text">{siteSettings?.site_name || 'CV Maker'}</span>
         </div>
         <span className="admin-badge">Admin</span>
       </div>
