@@ -115,7 +115,6 @@ export function SettingsPage() {
     { id: 'branding', label: '🎨 Marka' },
     { id: 'landing', label: '📄 Ana Sayfa' },
     { id: 'footer', label: '🦶 Footer' },
-    { id: 'pricing', label: '💰 Fiyatlandırma' },
     { id: 'stripe', label: '💳 Stripe' },
     { id: 'contact', label: '📞 İletişim' },
     { id: 'social', label: '🔗 Sosyal Medya' },
@@ -291,15 +290,6 @@ export function SettingsPage() {
           </div>
         )}
 
-
-        {activeTab === 'pricing' && (
-          <div className="settings-section">
-            <h2>Fiyatlandırma</h2>
-            <div className="pricing-card"><h3>💳 Tek Seferlik (PDF)</h3><div className="form-group"><label>Fiyat (₺)</label><input type="number" value={settings.oneTimePrice} onChange={e => setSettings({ ...settings, oneTimePrice: Number(e.target.value) })} /></div></div>
-            <div className="pricing-card"><h3>⭐ Pro Plan</h3><div className="form-row"><div className="form-group"><label>Aylık (₺)</label><input type="number" value={settings.proMonthlyPrice} onChange={e => setSettings({ ...settings, proMonthlyPrice: Number(e.target.value) })} /></div><div className="form-group"><label>Yıllık (₺)</label><input type="number" value={settings.proYearlyPrice} onChange={e => setSettings({ ...settings, proYearlyPrice: Number(e.target.value) })} /></div></div></div>
-            <div className="pricing-card"><h3>🏢 Business Plan</h3><div className="form-row"><div className="form-group"><label>Aylık (₺)</label><input type="number" value={settings.businessMonthlyPrice} onChange={e => setSettings({ ...settings, businessMonthlyPrice: Number(e.target.value) })} /></div><div className="form-group"><label>Yıllık (₺)</label><input type="number" value={settings.businessYearlyPrice} onChange={e => setSettings({ ...settings, businessYearlyPrice: Number(e.target.value) })} /></div></div></div>
-          </div>
-        )}
 
         {activeTab === 'stripe' && (
           <div className="settings-section">
