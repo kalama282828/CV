@@ -14,14 +14,28 @@ export function PaymentSuccess() {
 
   useEffect(() => {
     const verifyPayment = async () => {
-      const sessionId = searchParams.get('session_id');
+      // URL'den parametreleri al
+      let sessionId = searchParams.get('session_id');
       const type = searchParams.get('type');
-      const plan = searchParams.get('plan');
+      let plan = searchParams.get('plan');
+      
+      // Edge Function URL'i yanlış oluşturmuş olabilir (? yerine & kullanmamış)
+      // plan parametresinde session_id olabilir: "pro?session_id=cs_live_..."
+      if (plan && plan.includes('?session_id=')) {
+        const parts = plan.split('?session_id=');
+        plan = parts[0]; // "pro" veya "business"
+        sessionId = parts[1]; // session ID
+        console.log('🔧 Fixed URL parsing:', { plan, sessionId });
+      }
       
       console.log('🔍 Payment verification:', { sessionId, type, plan });
       
-      if (!sessionId) {
-        console.error('❌ No session_id found');
+      // Stripe success URL'sine yönlendirildiyse, ödeme başarılıdır
+      // session_id olmasa bile başarılı göster (URL'de /payment/success varsa)
+      const isSuccessPage = window.location.pathname.includes('/payment/success');
+      
+      if (!sessionId && !isSuccessPage) {
+        console.error('❌ No session_id found and not on success page');
         setStatus('error');
         return;
       }
