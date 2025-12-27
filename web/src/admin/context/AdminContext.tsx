@@ -147,13 +147,31 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   // Check Supabase auth on mount
   useEffect(() => {
     let isMounted = true;
-    let isCompleted = false;
+    
+    const checkAdminRole = async (userId: string): Promise<boolean> => {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single();
+        
+        if (error) {
+          console.error('❌ Profil hatası:', error);
+          return false;
+        }
+        
+        return profile?.role === 'admin' || profile?.role === 'super_admin';
+      } catch (error) {
+        console.error('❌ Role check error:', error);
+        return false;
+      }
+    };
     
     const checkAuth = async () => {
       try {
         console.log('🔐 Admin auth kontrolü başlıyor...');
         
-        // Önce cached session'ı kontrol et
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -161,7 +179,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           if (isMounted) {
             setIsAuthenticated(false);
             setAuthLoading(false);
-            isCompleted = true;
           }
           return;
         }
@@ -170,25 +187,15 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         
         if (session?.user) {
           console.log('👤 Session bulundu, admin kontrolü yapılıyor...');
-          // Check if user is admin
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profileError) {
-            console.error('❌ Profil hatası:', profileError);
-            // Profil hatası olsa bile session varsa devam et
-          }
+          const isAdmin = await checkAdminRole(session.user.id);
           
           if (!isMounted) return;
           
-          if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+          if (isAdmin) {
             console.log('✅ Admin yetkisi doğrulandı');
             setIsAuthenticated(true);
           } else {
-            console.log('⚠️ Admin yetkisi yok, role:', profile?.role);
+            console.log('⚠️ Admin yetkisi yok');
             setIsAuthenticated(false);
           }
         } else {
@@ -201,25 +208,19 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       } finally {
         if (isMounted) {
           setAuthLoading(false);
-          isCompleted = true;
         }
       }
     };
-    
-    // 10 saniye sonra timeout (artırıldı)
-    const timeoutId = setTimeout(() => {
-      if (isMounted && !isCompleted) {
-        console.warn('⚠️ Auth check timeout (10s) - login sayfası gösteriliyor');
-        setAuthLoading(false);
-        setIsAuthenticated(false);
-      }
-    }, 10000);
 
     checkAuth();
 
-    // Listen for auth changes
+    // Listen for auth changes - bu da loading'i kapatmalı
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔄 Auth state değişti:', event);
+      
+      // Auth state değiştiğinde loading'i kapat
+      setAuthLoading(false);
+      
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
       } else if (session?.user) {
@@ -230,8 +231,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           .single();
         
         if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+          console.log('✅ Auth state change: Admin yetkisi doğrulandı');
           setIsAuthenticated(true);
         } else {
+          console.log('⚠️ Auth state change: Admin yetkisi yok');
           setIsAuthenticated(false);
         }
       }
@@ -239,7 +242,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
