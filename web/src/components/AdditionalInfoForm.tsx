@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import type { AdditionalInfo } from '../types.ts';
 
 interface Props {
@@ -9,12 +9,18 @@ interface Props {
 
 export function AdditionalInfoForm({ data, photo, onChange }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Güncel data ve photo'yu ref'te tut - asenkron callback'lerde kullanmak için
+  const dataRef = useRef(data);
+  const photoRef = useRef(photo);
+  dataRef.current = data;
+  photoRef.current = photo;
 
   const handleChange = (field: keyof AdditionalInfo, value: string) => {
-    onChange({ ...data, [field]: value }, photo);
+    // photoRef.current kullanarak güncel photo'yu koru
+    onChange({ ...data, [field]: value }, photoRef.current);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
@@ -24,18 +30,19 @@ export function AdditionalInfoForm({ data, photo, onChange }: Props) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64 = event.target?.result as string;
-        onChange(data, base64);
+        // dataRef.current kullanarak güncel data'yı al
+        onChange(dataRef.current, base64);
       };
       reader.readAsDataURL(file);
     }
-  };
+  }, [onChange]);
 
-  const handleRemovePhoto = () => {
-    onChange(data, '');
+  const handleRemovePhoto = useCallback(() => {
+    onChange(dataRef.current, '');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  }, [onChange]);
 
   return (
     <div>

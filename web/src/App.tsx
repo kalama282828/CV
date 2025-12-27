@@ -515,7 +515,7 @@ function App() {
                 data={cvData.additionalInfo || { languages: '', certificates: '', awards: '', references: '' }}
                 photo={cvData.photo}
                 onChange={(additionalInfo: AdditionalInfo, photo?: string) =>
-                  setCvData({ ...cvData, additionalInfo, photo })
+                  setCvData({ ...cvData, additionalInfo, photo: photo !== undefined ? photo : cvData.photo })
                 }
               />
             )}

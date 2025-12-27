@@ -12,8 +12,18 @@ import { LoginPage } from './components/LoginPage';
 import './Admin.css';
 
 function AdminPanelContent() {
-  const { isAuthenticated } = useAdmin();
+  const { isAuthenticated, authLoading } = useAdmin();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Auth kontrolü yapılırken loading göster
+  if (authLoading) {
+    return (
+      <div className="admin-loading">
+        <div className="loading-spinner"></div>
+        <p>Yükleniyor...</p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <LoginPage />;

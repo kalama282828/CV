@@ -72,6 +72,7 @@ export interface DashboardStats {
 interface AdminContextType {
   // Auth
   isAuthenticated: boolean;
+  authLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   
@@ -133,7 +134,8 @@ const defaultStats: DashboardStats = {
 
 export function AdminProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [authLoading, setAuthLoading] = useState(true); // Auth kontrolü için
+  const [loading, setLoading] = useState(false); // Veri yükleme için
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [subscriptions, setSubscriptions] = useState<AdminSubscription[]>([]);
   const [payments, setPayments] = useState<AdminPayment[]>([]);
@@ -168,7 +170,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         console.error('Auth check error:', error);
         setIsAuthenticated(false);
       } finally {
-        setLoading(false);
+        setAuthLoading(false);
       }
     };
 
@@ -502,7 +504,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   return (
     <AdminContext.Provider value={{
-      isAuthenticated, login, logout,
+      isAuthenticated, authLoading, login, logout,
       loading,
       users, loadUsers, updateUser, deleteUser,
       subscriptions, loadSubscriptions, updateSubscription, cancelSubscription,
