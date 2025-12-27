@@ -19,19 +19,27 @@ export function PaymentSuccess() {
       const type = searchParams.get('type');
       let plan = searchParams.get('plan');
       
+      // Eski URL formatı için backward compatibility
       // Edge Function URL'i yanlış oluşturmuş olabilir (? yerine & kullanmamış)
       // plan parametresinde session_id olabilir: "pro?session_id=cs_live_..."
       if (plan && plan.includes('?session_id=')) {
         const parts = plan.split('?session_id=');
         plan = parts[0]; // "pro" veya "business"
-        sessionId = parts[1]; // session ID
+        if (!sessionId) {
+          sessionId = parts[1]; // session ID
+        }
         console.log('🔧 Fixed URL parsing:', { plan, sessionId });
+      }
+      
+      // URL hash'inde session_id olabilir (Stripe bazen hash kullanıyor)
+      if (!sessionId && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        sessionId = hashParams.get('session_id');
       }
       
       console.log('🔍 Payment verification:', { sessionId, type, plan });
       
       // Stripe success URL'sine yönlendirildiyse, ödeme başarılıdır
-      // session_id olmasa bile başarılı göster (URL'de /payment/success varsa)
       const isSuccessPage = window.location.pathname.includes('/payment/success');
       
       if (!sessionId && !isSuccessPage) {

@@ -52,11 +52,13 @@ export function PaymentModal({
       
       if (isSubscription && subscriptionPlan) {
         // Aylık abonelik ödemesi
+        // NOT: successUrl'e query param EKLEMİYORUZ çünkü Edge Function zaten ?session_id= ekliyor
+        // type ve plan bilgisini Edge Function metadata'dan alacak
         await startSubscriptionCheckout({
           plan: subscriptionPlan,
           priceAmount: finalPrice,
           userEmail,
-          successUrl: `${currentUrl}/payment/success?type=subscription&plan=${subscriptionPlan}`,
+          successUrl: `${currentUrl}/payment/success`,
           cancelUrl: `${currentUrl}/payment/cancel`,
         });
       } else {
