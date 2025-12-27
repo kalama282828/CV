@@ -147,8 +147,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   // Check Supabase auth on mount
   useEffect(() => {
     const checkAuth = async () => {
+      // 3 saniye sonra authLoading'i kapat (timeout)
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Auth check timeout');
+        setAuthLoading(false);
+      }, 3000);
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        
+        clearTimeout(timeoutId);
         
         if (session?.user) {
           // Check if user is admin
@@ -167,11 +175,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           setIsAuthenticated(false);
         }
       } catch (error) {
+        clearTimeout(timeoutId);
         console.error('Auth check error:', error);
         setIsAuthenticated(false);
-      } finally {
-        setAuthLoading(false);
       }
+      
+      setAuthLoading(false);
     };
 
     checkAuth();

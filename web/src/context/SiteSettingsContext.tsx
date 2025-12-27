@@ -293,21 +293,14 @@ function frontendToDb(settings: SiteSettings): Record<string, unknown> {
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Başlangıçta false - default settings ile başla
 
-  // Load settings from database
+  // Load settings from database (arka planda)
   const loadFromDatabase = useCallback(async () => {
+    console.log('🔄 Loading settings from Supabase...');
+    
     try {
-      console.log('🔄 Loading settings from Supabase...');
-      
-      // Timeout ile birlikte fetch yap - 5 saniye sonra timeout
-      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout')), 5000)
-      );
-      
-      const fetchPromise = siteSettingsService.getSettings();
-      
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      const { data, error } = await siteSettingsService.getSettings();
       
       console.log('📦 Supabase response:', { data, error });
       if (!error && data) {
@@ -316,15 +309,11 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         setSettings(prev => ({ ...prev, ...converted }));
       } else if (error) {
         console.error('❌ Supabase error:', error);
-        // Hata olsa bile default settings kullan
       } else {
         console.warn('⚠️ No data returned from Supabase - using defaults');
       }
     } catch (err) {
       console.error('Failed to load settings from database:', err);
-      // Hata olsa bile default settings ile devam et
-    } finally {
-      setLoading(false);
     }
   }, []);
 
