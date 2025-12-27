@@ -147,7 +147,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   // Check Supabase auth on mount
   useEffect(() => {
     let isMounted = true;
-    let timeoutId: ReturnType<typeof setTimeout>;
+    let isCompleted = false;
     
     const checkAuth = async () => {
       try {
@@ -159,6 +159,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           if (isMounted) {
             setIsAuthenticated(false);
             setAuthLoading(false);
+            isCompleted = true;
           }
           return;
         }
@@ -196,20 +197,20 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         if (isMounted) setIsAuthenticated(false);
       } finally {
         if (isMounted) {
-          clearTimeout(timeoutId);
           setAuthLoading(false);
+          isCompleted = true;
         }
       }
     };
     
-    // 8 saniye sonra timeout (Supabase yavaş olabilir)
-    timeoutId = setTimeout(() => {
-      if (isMounted && authLoading) {
+    // 5 saniye sonra timeout
+    const timeoutId = setTimeout(() => {
+      if (isMounted && !isCompleted) {
         console.warn('⚠️ Auth check timeout - login sayfası gösteriliyor');
         setAuthLoading(false);
         setIsAuthenticated(false);
       }
-    }, 8000);
+    }, 5000);
 
     checkAuth();
 
