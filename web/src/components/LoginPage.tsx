@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { PaymentModal } from './PaymentModal';
+import { pricingPlansService, type PricingPlan } from '../lib/database';
 import type { SubscriptionPlan } from '../lib/stripe';
 
 export function LoginPage() {
@@ -16,15 +17,40 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+
+  // Fiyat planlarını yükle
+  useEffect(() => {
+    const loadPricing = async () => {
+      const { data } = await pricingPlansService.getAllPlans();
+      if (data) setPricingPlans(data);
+    };
+    loadPricing();
+  }, []);
 
   // Seçilen plan (URL'den veya localStorage'dan)
   const selectedPlan = searchParams.get('plan') || localStorage.getItem('selected-plan');
 
-  // Plan bilgisini göster
+  // Plan bilgisini göster - önce pricing_plans tablosundan, yoksa settings'den
   const getPlanInfo = (): { name: string; price: number; isSubscription: boolean; subscriptionPlan?: SubscriptionPlan } | null => {
+    const proPlan = pricingPlans.find(p => p.id === 'pro');
+    const businessPlan = pricingPlans.find(p => p.id === 'business');
+    
     switch (selectedPlan) {
-      case 'pro': return { name: 'Pro Plan', price: settings.proMonthlyPrice, isSubscription: true, subscriptionPlan: 'pro' };
-      case 'business': return { name: 'İşletme Plan', price: settings.businessMonthlyPrice, isSubscription: true, subscriptionPlan: 'business' };
+      case 'pro': 
+        return { 
+          name: 'Pro Plan', 
+          price: proPlan?.monthly_price || settings.proMonthlyPrice || 99.99, 
+          isSubscription: true, 
+          subscriptionPlan: 'pro' 
+        };
+      case 'business': 
+        return { 
+          name: 'İşletme Plan', 
+          price: businessPlan?.monthly_price || settings.businessMonthlyPrice || 249.99, 
+          isSubscription: true, 
+          subscriptionPlan: 'business' 
+        };
       default: return null;
     }
   };

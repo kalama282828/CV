@@ -152,6 +152,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       try {
         console.log('🔐 Admin auth kontrolü başlıyor...');
+        
+        // Önce cached session'ı kontrol et
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -177,6 +179,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           
           if (profileError) {
             console.error('❌ Profil hatası:', profileError);
+            // Profil hatası olsa bile session varsa devam et
           }
           
           if (!isMounted) return;
@@ -185,7 +188,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             console.log('✅ Admin yetkisi doğrulandı');
             setIsAuthenticated(true);
           } else {
-            console.log('⚠️ Admin yetkisi yok');
+            console.log('⚠️ Admin yetkisi yok, role:', profile?.role);
             setIsAuthenticated(false);
           }
         } else {
@@ -203,14 +206,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       }
     };
     
-    // 5 saniye sonra timeout
+    // 10 saniye sonra timeout (artırıldı)
     const timeoutId = setTimeout(() => {
       if (isMounted && !isCompleted) {
-        console.warn('⚠️ Auth check timeout - login sayfası gösteriliyor');
+        console.warn('⚠️ Auth check timeout (10s) - login sayfası gösteriliyor');
         setAuthLoading(false);
         setIsAuthenticated(false);
       }
-    }, 5000);
+    }, 10000);
 
     checkAuth();
 
