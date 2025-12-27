@@ -215,12 +215,12 @@ function dbToFrontend(dbSettings: Record<string, unknown>): Partial<SiteSettings
     footerCompanyLink2Url: companyLinks[1]?.url || defaultSettings.footerCompanyLink2Url,
     footerCompanyLink3Text: companyLinks[2]?.text || defaultSettings.footerCompanyLink3Text,
     footerCompanyLink3Url: companyLinks[2]?.url || defaultSettings.footerCompanyLink3Url,
-    // Fiyat alanları
-    oneTimePrice: Number(dbSettings.one_time_price) || defaultSettings.oneTimePrice,
-    proMonthlyPrice: Number(dbSettings.pro_monthly_price) || defaultSettings.proMonthlyPrice,
-    proYearlyPrice: Number(dbSettings.pro_yearly_price) || defaultSettings.proYearlyPrice,
-    businessMonthlyPrice: Number(dbSettings.business_monthly_price) || defaultSettings.businessMonthlyPrice,
-    businessYearlyPrice: Number(dbSettings.business_yearly_price) || defaultSettings.businessYearlyPrice,
+    // Fiyat alanları - 0 veya null ise default kullan
+    oneTimePrice: Number(dbSettings.one_time_price) > 0 ? Number(dbSettings.one_time_price) : defaultSettings.oneTimePrice,
+    proMonthlyPrice: Number(dbSettings.pro_monthly_price) > 0 ? Number(dbSettings.pro_monthly_price) : defaultSettings.proMonthlyPrice,
+    proYearlyPrice: Number(dbSettings.pro_yearly_price) > 0 ? Number(dbSettings.pro_yearly_price) : defaultSettings.proYearlyPrice,
+    businessMonthlyPrice: Number(dbSettings.business_monthly_price) > 0 ? Number(dbSettings.business_monthly_price) : defaultSettings.businessMonthlyPrice,
+    businessYearlyPrice: Number(dbSettings.business_yearly_price) > 0 ? Number(dbSettings.business_yearly_price) : defaultSettings.businessYearlyPrice,
   };
 }
 
