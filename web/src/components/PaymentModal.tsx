@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { startCheckout, startSubscriptionCheckout, getStripePublishableKey, isStripeTestMode, type SubscriptionPlan } from '../lib/stripe';
 
 export type PaymentType = 'one-time' | 'subscription';
@@ -13,6 +14,7 @@ interface PaymentModalProps {
   userEmail?: string;
   paymentType?: PaymentType;
   subscriptionPlan?: SubscriptionPlan;
+  currentPlan?: 'free' | 'pro' | 'business';
 }
 
 export function PaymentModal({ 
@@ -24,14 +26,22 @@ export function PaymentModal({
   planName = 'CV İndirme',
   userEmail,
   paymentType = 'one-time',
-  subscriptionPlan
+  subscriptionPlan,
+  currentPlan = 'free'
 }: PaymentModalProps) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Use amount if provided, otherwise fall back to price, then default to 50
   const finalPrice = amount ?? price ?? 50;
   const isSubscription = paymentType === 'subscription';
+  
+  // Kullanıcı zaten bu plana veya daha yüksek bir plana sahip mi?
+  const isAlreadySubscribed = isSubscription && (
+    (subscriptionPlan === 'pro' && (currentPlan === 'pro' || currentPlan === 'business')) ||
+    (subscriptionPlan === 'business' && currentPlan === 'business')
+  );
 
   if (!isOpen) return null;
 
@@ -112,7 +122,44 @@ export function PaymentModal({
         
         <div className="modal-icon">{isSubscription ? '⭐' : '📄'}</div>
         
-        <h2>{planName}</h2>
+        {isAlreadySubscribed ? (
+          <>
+            <h2>Zaten Abonesiniz! 🎉</h2>
+            <p className="modal-subtitle">
+              {currentPlan === 'business' ? 'İşletme' : 'Pro'} planına sahipsiniz
+            </p>
+            
+            <div style={{
+              background: '#f0fdf4',
+              borderRadius: '12px',
+              padding: '20px',
+              marginTop: '16px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
+              <p style={{ color: '#059669', fontSize: '14px', fontWeight: 'bold' }}>
+                Tüm premium özelliklere erişiminiz var!
+              </p>
+              <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '8px' }}>
+                Sınırsız CV oluşturabilir ve PDF indirebilirsiniz.
+              </p>
+            </div>
+            
+            <button 
+              className="btn-pay" 
+              onClick={() => { onClose(); navigate('/app'); }}
+              style={{ backgroundColor: '#059669' }}
+            >
+              CV Oluşturmaya Git →
+            </button>
+            
+            <button className="btn-cancel" onClick={onClose}>
+              Kapat
+            </button>
+          </>
+        ) : (
+          <>
+            <h2>{planName}</h2>
         <p className="modal-subtitle">
           {isSubscription ? 'Aylık Abonelik' : 'Tek Seferlik Premium'}
         </p>
@@ -233,7 +280,7 @@ export function PaymentModal({
         )}
 
         {/* Stripe Badge */}
-        {isStripeConfigured && (
+        {isStripeConfigured && !isAlreadySubscribed && (
           <div style={{
             marginTop: '8px',
             fontSize: '11px',
@@ -245,6 +292,8 @@ export function PaymentModal({
           }}>
             Powered by <span style={{ fontWeight: 'bold', color: '#635bff' }}>Stripe</span>
           </div>
+        )}
+        </>
         )}
       </div>
 

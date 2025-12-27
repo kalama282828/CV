@@ -1,13 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { useAuth } from '../context/AuthContext';
 import { pricingPlansService, type PricingPlan } from '../lib/database';
 
 // LandingPage - Türkçe ana sayfa komponenti
 export function LandingPage() {
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
+  const { profile } = useAuth();
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  
+  // Kullanıcının mevcut planı
+  const currentPlan = profile?.plan || 'free';
 
   // Fiyat planlarını veritabanından yükle
   useEffect(() => {
@@ -45,6 +50,18 @@ export function LandingPage() {
   };
 
   const handlePurchase = (plan: 'one-time' | 'pro' | 'business') => {
+    // Kullanıcı zaten bu plana veya daha yüksek bir plana sahipse uyarı göster
+    if (plan === 'pro' && (currentPlan === 'pro' || currentPlan === 'business')) {
+      alert('Zaten bir aboneliğiniz var! CV oluşturmaya devam edebilirsiniz.');
+      navigate('/app');
+      return;
+    }
+    if (plan === 'business' && currentPlan === 'business') {
+      alert('Zaten İşletme planına sahipsiniz! CV oluşturmaya devam edebilirsiniz.');
+      navigate('/app');
+      return;
+    }
+    
     // Seçilen planı localStorage'a kaydet
     localStorage.setItem('selected-plan', plan);
     // Kayıt sayfasına yönlendir
@@ -295,7 +312,17 @@ export function LandingPage() {
                       </>
                     )}
                   </ul>
-                  <button onClick={() => handlePurchase('pro')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 text-white font-bold" style={{ backgroundColor: settings.primaryColor }}>Pro'ya Geç</button>
+                  {currentPlan === 'pro' || currentPlan === 'business' ? (
+                    <div className="mt-4 flex flex-col items-center gap-2">
+                      <div className="flex items-center justify-center rounded-lg h-10 px-4 bg-green-100 text-green-700 font-bold w-full">
+                        <span className="material-symbols-outlined text-[18px] mr-2">check_circle</span>
+                        {currentPlan === 'pro' ? 'Mevcut Planınız' : 'Zaten Abone'}
+                      </div>
+                      <button onClick={() => navigate('/app')} className="text-sm text-[#616f89] hover:underline">CV Oluşturmaya Git →</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => handlePurchase('pro')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 text-white font-bold" style={{ backgroundColor: settings.primaryColor }}>Pro'ya Geç</button>
+                  )}
                 </div>
                 <div className="flex flex-col gap-4 rounded-xl border border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
                   <h3 className="text-[#111318] dark:text-white text-xl font-bold">İşletme</h3>
@@ -317,7 +344,19 @@ export function LandingPage() {
                       </>
                     )}
                   </ul>
-                  <button onClick={() => handlePurchase('business')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Satın Al</button>
+                  {currentPlan === 'business' ? (
+                    <div className="mt-4 flex flex-col items-center gap-2">
+                      <div className="flex items-center justify-center rounded-lg h-10 px-4 bg-green-100 text-green-700 font-bold w-full">
+                        <span className="material-symbols-outlined text-[18px] mr-2">check_circle</span>
+                        Mevcut Planınız
+                      </div>
+                      <button onClick={() => navigate('/app')} className="text-sm text-[#616f89] hover:underline">CV Oluşturmaya Git →</button>
+                    </div>
+                  ) : currentPlan === 'pro' ? (
+                    <button onClick={() => handlePurchase('business')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 text-white font-bold" style={{ backgroundColor: settings.primaryColor }}>Yükselt</button>
+                  ) : (
+                    <button onClick={() => handlePurchase('business')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Satın Al</button>
+                  )}
                 </div>
               </div>
             </div>

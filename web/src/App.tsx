@@ -402,6 +402,7 @@ function App() {
         onPaymentSuccess={handlePaymentSuccess}
         price={settings.oneTimePrice}
         userEmail={userEmail || cvData.personalInfo.email}
+        currentPlan={plan}
       />
 
       <header className="header">

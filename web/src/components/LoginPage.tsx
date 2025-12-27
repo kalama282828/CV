@@ -9,7 +9,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { settings } = useSiteSettings();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, profile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -256,6 +256,7 @@ export function LoginPage() {
           userEmail={email}
           paymentType={planInfo.isSubscription ? 'subscription' : 'one-time'}
           subscriptionPlan={planInfo.subscriptionPlan}
+          currentPlan={profile?.plan || 'free'}
         />
       )}
     </div>
