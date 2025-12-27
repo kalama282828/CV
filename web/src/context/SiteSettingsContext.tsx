@@ -298,9 +298,17 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   // Load settings from database
   const loadFromDatabase = useCallback(async () => {
     try {
-      setLoading(true);
       console.log('🔄 Loading settings from Supabase...');
-      const { data, error } = await siteSettingsService.getSettings();
+      
+      // Timeout ile birlikte fetch yap - 5 saniye sonra timeout
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      );
+      
+      const fetchPromise = siteSettingsService.getSettings();
+      
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+      
       console.log('📦 Supabase response:', { data, error });
       if (!error && data) {
         const converted = dbToFrontend(data as unknown as Record<string, unknown>);
@@ -308,11 +316,13 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         setSettings(prev => ({ ...prev, ...converted }));
       } else if (error) {
         console.error('❌ Supabase error:', error);
+        // Hata olsa bile default settings kullan
       } else {
         console.warn('⚠️ No data returned from Supabase - using defaults');
       }
     } catch (err) {
       console.error('Failed to load settings from database:', err);
+      // Hata olsa bile default settings ile devam et
     } finally {
       setLoading(false);
     }
