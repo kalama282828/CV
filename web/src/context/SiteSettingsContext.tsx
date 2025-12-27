@@ -215,6 +215,12 @@ function dbToFrontend(dbSettings: Record<string, unknown>): Partial<SiteSettings
     footerCompanyLink2Url: companyLinks[1]?.url || defaultSettings.footerCompanyLink2Url,
     footerCompanyLink3Text: companyLinks[2]?.text || defaultSettings.footerCompanyLink3Text,
     footerCompanyLink3Url: companyLinks[2]?.url || defaultSettings.footerCompanyLink3Url,
+    // Fiyat alanları
+    oneTimePrice: Number(dbSettings.one_time_price) || defaultSettings.oneTimePrice,
+    proMonthlyPrice: Number(dbSettings.pro_monthly_price) || defaultSettings.proMonthlyPrice,
+    proYearlyPrice: Number(dbSettings.pro_yearly_price) || defaultSettings.proYearlyPrice,
+    businessMonthlyPrice: Number(dbSettings.business_monthly_price) || defaultSettings.businessMonthlyPrice,
+    businessYearlyPrice: Number(dbSettings.business_yearly_price) || defaultSettings.businessYearlyPrice,
   };
 }
 
@@ -276,6 +282,12 @@ function frontendToDb(settings: SiteSettings): Record<string, unknown> {
       { text: settings.footerCompanyLink2Text, url: settings.footerCompanyLink2Url },
       { text: settings.footerCompanyLink3Text, url: settings.footerCompanyLink3Url },
     ].filter(l => l.text),
+    // Fiyat alanları
+    one_time_price: settings.oneTimePrice,
+    pro_monthly_price: settings.proMonthlyPrice,
+    pro_yearly_price: settings.proYearlyPrice,
+    business_monthly_price: settings.businessMonthlyPrice,
+    business_yearly_price: settings.businessYearlyPrice,
   };
 }
 

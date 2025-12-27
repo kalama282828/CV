@@ -1,10 +1,37 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useSiteSettings } from '../context/SiteSettingsContext';
+import { pricingPlansService, type PricingPlan } from '../lib/database';
 
 // LandingPage - Türkçe ana sayfa komponenti
 export function LandingPage() {
   const navigate = useNavigate();
   const { settings, loading } = useSiteSettings();
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+
+  // Fiyat planlarını veritabanından yükle
+  useEffect(() => {
+    const loadPricingPlans = async () => {
+      const { data } = await pricingPlansService.getAllPlans();
+      if (data) {
+        setPricingPlans(data);
+      }
+    };
+    loadPricingPlans();
+  }, []);
+
+  // Plana göre fiyat bilgisi al
+  const getPlanPrice = (planId: string, type: 'monthly' | 'yearly' = 'monthly') => {
+    const plan = pricingPlans.find(p => p.id === planId);
+    if (!plan) return type === 'monthly' ? settings.oneTimePrice : settings.oneTimePrice;
+    return type === 'monthly' ? plan.monthly_price : plan.yearly_price;
+  };
+
+  // Plana göre özellik listesi al
+  const getPlanFeatures = (planId: string) => {
+    const plan = pricingPlans.find(p => p.id === planId);
+    return plan?.features || [];
+  };
 
   const handleGetStarted = () => {
     try {
@@ -237,13 +264,21 @@ export function LandingPage() {
                 <div className="flex flex-col gap-4 rounded-xl border border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
                   <h3 className="text-[#111318] dark:text-white text-xl font-bold">Tek Seferlik</h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold" style={{ color: settings.primaryColor }}>{settings.oneTimePrice}₺</span>
+                    <span className="text-3xl font-bold" style={{ color: settings.primaryColor }}>{getPlanPrice('one-time')}₺</span>
                     <span className="text-[#616f89] dark:text-gray-400 text-sm">/ tek seferlik</span>
                   </div>
                   <ul className="flex flex-col gap-2 text-sm text-[#616f89] dark:text-gray-400">
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>1 CV indirme</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Tüm şablonlar</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>PDF & Word formatı</li>
+                    {getPlanFeatures('one-time').length > 0 ? (
+                      getPlanFeatures('one-time').map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>{feature}</li>
+                      ))
+                    ) : (
+                      <>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>1 CV indirme</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Tüm şablonlar</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>PDF & Word formatı</li>
+                      </>
+                    )}
                   </ul>
                   <button onClick={handleGetStarted} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Ücretsiz Başla</button>
                   <p className="text-xs text-center text-[#616f89]">PDF indirirken ödeme yapılır</p>
@@ -252,28 +287,44 @@ export function LandingPage() {
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-white text-xs font-bold" style={{ backgroundColor: settings.primaryColor }}>Popüler</div>
                   <h3 className="text-[#111318] dark:text-white text-xl font-bold">Pro</h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold" style={{ color: settings.primaryColor }}>{settings.proMonthlyPrice}₺</span>
+                    <span className="text-3xl font-bold" style={{ color: settings.primaryColor }}>{getPlanPrice('pro')}₺</span>
                     <span className="text-[#616f89] dark:text-gray-400 text-sm">/ aylık</span>
                   </div>
                   <ul className="flex flex-col gap-2 text-sm text-[#616f89] dark:text-gray-400">
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Sınırsız CV</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Premium şablonlar</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Akıllı öneriler</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Öncelikli destek</li>
+                    {getPlanFeatures('pro').length > 0 ? (
+                      getPlanFeatures('pro').map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>{feature}</li>
+                      ))
+                    ) : (
+                      <>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Sınırsız CV</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Premium şablonlar</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Akıllı öneriler</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Öncelikli destek</li>
+                      </>
+                    )}
                   </ul>
                   <button onClick={() => handlePurchase('pro')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 text-white font-bold" style={{ backgroundColor: settings.primaryColor }}>Pro'ya Geç</button>
                 </div>
                 <div className="flex flex-col gap-4 rounded-xl border border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
                   <h3 className="text-[#111318] dark:text-white text-xl font-bold">İşletme</h3>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold" style={{ color: settings.primaryColor }}>{settings.businessMonthlyPrice}₺</span>
+                    <span className="text-3xl font-bold" style={{ color: settings.primaryColor }}>{getPlanPrice('business')}₺</span>
                     <span className="text-[#616f89] dark:text-gray-400 text-sm">/ aylık</span>
                   </div>
                   <ul className="flex flex-col gap-2 text-sm text-[#616f89] dark:text-gray-400">
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Takım yönetimi</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Özel şablonlar</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>API erişimi</li>
-                    <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>7/24 destek</li>
+                    {getPlanFeatures('business').length > 0 ? (
+                      getPlanFeatures('business').map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>{feature}</li>
+                      ))
+                    ) : (
+                      <>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Takım yönetimi</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>Özel şablonlar</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>API erişimi</li>
+                        <li className="flex items-center gap-2"><span className="material-symbols-outlined text-green-500 text-[18px]">check</span>7/24 destek</li>
+                      </>
+                    )}
                   </ul>
                   <button onClick={() => handlePurchase('business')} className="mt-4 flex items-center justify-center rounded-lg h-10 px-4 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">Satın Al</button>
                 </div>

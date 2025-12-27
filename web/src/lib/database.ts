@@ -120,6 +120,12 @@ export interface SiteSettings {
   footer_product_links: { text: string; url: string }[];
   footer_company_title: string | null;
   footer_company_links: { text: string; url: string }[];
+  // Fiyat alanları
+  one_time_price: number | null;
+  pro_monthly_price: number | null;
+  pro_yearly_price: number | null;
+  business_monthly_price: number | null;
+  business_yearly_price: number | null;
   updated_at: string;
 }
 
@@ -265,11 +271,42 @@ export const subscriptionsService = {
   },
 
   async getAllSubscriptions() {
-    const { data, error } = await supabase
+    // subscriptions tablosu profiles ile join için ayrı sorgu gerekiyor
+    const { data: subscriptions, error } = await supabase
       .from('subscriptions')
-      .select('*, profiles(name, email)')
+      .select('*')
       .order('created_at', { ascending: false });
-    return { data: data as Subscription[] | null, error };
+    
+    if (error || !subscriptions) {
+      return { data: null, error };
+    }
+
+    // User ID'leri topla ve profiles'dan bilgileri çek
+    const userIds = [...new Set(subscriptions.map(s => s.user_id))];
+    
+    let profilesMap: Record<string, { name: string | null; email: string }> = {};
+    
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+      
+      if (profiles) {
+        profilesMap = profiles.reduce((acc, p) => {
+          acc[p.id] = { name: p.name, email: p.email };
+          return acc;
+        }, {} as Record<string, { name: string | null; email: string }>);
+      }
+    }
+
+    // Subscriptions'a profile bilgilerini ekle
+    const subscriptionsWithProfiles = subscriptions.map(sub => ({
+      ...sub,
+      profiles: profilesMap[sub.user_id] || null,
+    }));
+
+    return { data: subscriptionsWithProfiles as Subscription[], error: null };
   },
 
   async createSubscription(subscriptionData: Omit<Subscription, 'id' | 'created_at' | 'updated_at'>) {
@@ -311,11 +348,45 @@ export const paymentsService = {
   },
 
   async getAllPayments() {
-    const { data, error } = await supabase
+    // payments tablosu profiles ile foreign key ilişkisi olmadığı için
+    // önce payments'ı çek, sonra user bilgilerini ayrı çek
+    const { data: payments, error } = await supabase
       .from('payments')
-      .select('*, profiles(name, email)')
+      .select('*')
       .order('created_at', { ascending: false });
-    return { data: data as Payment[] | null, error };
+    
+    if (error || !payments) {
+      return { data: null, error };
+    }
+
+    // User ID'leri topla ve profiles'dan bilgileri çek
+    const userIds = [...new Set(payments.filter(p => p.user_id).map(p => p.user_id))];
+    
+    let profilesMap: Record<string, { name: string | null; email: string }> = {};
+    
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+      
+      if (profiles) {
+        profilesMap = profiles.reduce((acc, p) => {
+          acc[p.id] = { name: p.name, email: p.email };
+          return acc;
+        }, {} as Record<string, { name: string | null; email: string }>);
+      }
+    }
+
+    // Payments'a profile bilgilerini ekle
+    const paymentsWithProfiles = payments.map(payment => ({
+      ...payment,
+      profiles: payment.user_id && profilesMap[payment.user_id] 
+        ? profilesMap[payment.user_id] 
+        : null,
+    }));
+
+    return { data: paymentsWithProfiles as Payment[], error: null };
   },
 
   async createPayment(paymentData: Omit<Payment, 'id' | 'created_at' | 'updated_at'>) {
