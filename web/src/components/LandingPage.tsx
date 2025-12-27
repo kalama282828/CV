@@ -6,7 +6,7 @@ import { pricingPlansService, type PricingPlan } from '../lib/database';
 // LandingPage - Türkçe ana sayfa komponenti
 export function LandingPage() {
   const navigate = useNavigate();
-  const { settings, loading } = useSiteSettings();
+  const { settings } = useSiteSettings();
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
 
   // Fiyat planlarını veritabanından yükle
@@ -50,15 +50,6 @@ export function LandingPage() {
     // Kayıt sayfasına yönlendir
     navigate('/kayit?plan=' + plan);
   };
-
-  // Veri yüklenene kadar loading göster
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f6f6f8] dark:bg-[#101622]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="landing-page bg-[#f6f6f8] dark:bg-[#101622] text-[#111318] dark:text-white min-h-screen">

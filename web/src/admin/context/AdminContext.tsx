@@ -147,51 +147,75 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   // Check Supabase auth on mount
   useEffect(() => {
     let isMounted = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
     
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log('🔐 Admin auth kontrolü başlıyor...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('❌ Session hatası:', sessionError);
+          if (isMounted) {
+            setIsAuthenticated(false);
+            setAuthLoading(false);
+          }
+          return;
+        }
         
         if (!isMounted) return;
         
         if (session?.user) {
+          console.log('👤 Session bulundu, admin kontrolü yapılıyor...');
           // Check if user is admin
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', session.user.id)
             .single();
           
+          if (profileError) {
+            console.error('❌ Profil hatası:', profileError);
+          }
+          
           if (!isMounted) return;
           
           if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+            console.log('✅ Admin yetkisi doğrulandı');
             setIsAuthenticated(true);
           } else {
+            console.log('⚠️ Admin yetkisi yok');
             setIsAuthenticated(false);
           }
         } else {
+          console.log('ℹ️ Session yok, giriş gerekli');
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error('❌ Auth check error:', error);
         if (isMounted) setIsAuthenticated(false);
       } finally {
-        if (isMounted) setAuthLoading(false);
+        if (isMounted) {
+          clearTimeout(timeoutId);
+          setAuthLoading(false);
+        }
       }
     };
     
-    // 3 saniye sonra timeout
-    const timeoutId = setTimeout(() => {
+    // 8 saniye sonra timeout (Supabase yavaş olabilir)
+    timeoutId = setTimeout(() => {
       if (isMounted && authLoading) {
-        console.warn('⚠️ Auth check timeout');
+        console.warn('⚠️ Auth check timeout - login sayfası gösteriliyor');
         setAuthLoading(false);
+        setIsAuthenticated(false);
       }
-    }, 3000);
+    }, 8000);
 
     checkAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state değişti:', event);
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
       } else if (session?.user) {
