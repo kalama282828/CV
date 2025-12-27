@@ -102,7 +102,7 @@ function dbFormatToCvData(dbData: {
 
 function App() {
   const { settings } = useSiteSettings();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [cvData, setCvData] = useState<CVData>(() => loadSavedData().cvData);
   const [template, setTemplate] = useState<TemplateName>(() => loadSavedData().template);
   const [language, setLanguage] = useState<Language>(() => loadSavedData().language);
@@ -464,6 +464,21 @@ function App() {
               <>📄 PDF İndir {!canExportPDF && `(₺${settings.oneTimePrice})`}</>
             )}
           </button>
+          
+          {/* Çıkış Butonu */}
+          {user && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={async () => {
+                await signOut();
+                window.location.href = '/';
+              }}
+              title="Çıkış Yap"
+              style={{ marginLeft: '8px' }}
+            >
+              🚪 Çıkış
+            </button>
+          )}
         </div>
       </header>
 
