@@ -114,6 +114,8 @@ serve(async (req: Request) => {
           userId: userId || '',
         },
       },
+      // İlk ödemenin hemen alınmasını zorla - trial veya credit balance'ı bypass et
+      payment_method_collection: 'always',
     };
 
     // Only add customer_email if valid
