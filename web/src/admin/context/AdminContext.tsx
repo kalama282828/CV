@@ -146,17 +146,13 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   // Check Supabase auth on mount
   useEffect(() => {
+    let isMounted = true;
+    
     const checkAuth = async () => {
-      // 3 saniye sonra authLoading'i kapat (timeout)
-      const timeoutId = setTimeout(() => {
-        console.warn('⚠️ Auth check timeout');
-        setAuthLoading(false);
-      }, 3000);
-      
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        clearTimeout(timeoutId);
+        if (!isMounted) return;
         
         if (session?.user) {
           // Check if user is admin
@@ -165,6 +161,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             .select('role')
             .eq('id', session.user.id)
             .single();
+          
+          if (!isMounted) return;
           
           if (profile?.role === 'admin' || profile?.role === 'super_admin') {
             setIsAuthenticated(true);
@@ -175,13 +173,20 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           setIsAuthenticated(false);
         }
       } catch (error) {
-        clearTimeout(timeoutId);
         console.error('Auth check error:', error);
-        setIsAuthenticated(false);
+        if (isMounted) setIsAuthenticated(false);
+      } finally {
+        if (isMounted) setAuthLoading(false);
       }
-      
-      setAuthLoading(false);
     };
+    
+    // 3 saniye sonra timeout
+    const timeoutId = setTimeout(() => {
+      if (isMounted && authLoading) {
+        console.warn('⚠️ Auth check timeout');
+        setAuthLoading(false);
+      }
+    }, 3000);
 
     checkAuth();
 
@@ -204,7 +209,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Load all data when authenticated

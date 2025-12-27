@@ -293,7 +293,7 @@ function frontendToDb(settings: SiteSettings): Record<string, unknown> {
 
 export function SiteSettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
-  const [loading, setLoading] = useState(false); // Başlangıçta false - default settings ile başla
+  const [loading] = useState(false); // Başlangıçta false - default settings ile başla
 
   // Load settings from database (arka planda)
   const loadFromDatabase = useCallback(async () => {
