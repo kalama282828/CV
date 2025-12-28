@@ -79,14 +79,20 @@ export interface CheckoutSessionResponse {
 export async function createCheckoutSession(
   request: CheckoutSessionRequest
 ): Promise<CheckoutSessionResponse> {
+  // Get current session for auth
+  const { data: { session } } = await supabase.auth.getSession();
+  
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: {
       priceAmount: convertToKurus(request.priceAmount),
-      userEmail: request.userEmail,
+      userEmail: request.userEmail || session?.user?.email,
       successUrl: request.successUrl,
       cancelUrl: request.cancelUrl,
-      userId: request.userId,
+      userId: request.userId || session?.user?.id,
     },
+    headers: session?.access_token ? {
+      Authorization: `Bearer ${session.access_token}`,
+    } : undefined,
   });
 
   if (error) {
@@ -132,15 +138,21 @@ export interface SubscriptionCheckoutRequest {
 export async function createSubscriptionCheckout(
   request: SubscriptionCheckoutRequest
 ): Promise<CheckoutSessionResponse> {
+  // Get current session for auth
+  const { data: { session } } = await supabase.auth.getSession();
+  
   const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
     body: {
       plan: request.plan,
       priceAmount: convertToKurus(request.priceAmount),
-      userEmail: request.userEmail,
+      userEmail: request.userEmail || session?.user?.email,
       successUrl: request.successUrl,
       cancelUrl: request.cancelUrl,
-      userId: request.userId,
+      userId: request.userId || session?.user?.id,
     },
+    headers: session?.access_token ? {
+      Authorization: `Bearer ${session.access_token}`,
+    } : undefined,
   });
 
   if (error) {
