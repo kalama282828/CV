@@ -82,6 +82,9 @@ export async function createCheckoutSession(
   // Get current session for auth
   const { data: { session } } = await supabase.auth.getSession();
   
+  // Anon key'i environment'tan al
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: {
       priceAmount: convertToKurus(request.priceAmount),
@@ -90,9 +93,9 @@ export async function createCheckoutSession(
       cancelUrl: request.cancelUrl,
       userId: request.userId || session?.user?.id,
     },
-    headers: session?.access_token ? {
-      Authorization: `Bearer ${session.access_token}`,
-    } : undefined,
+    headers: {
+      Authorization: `Bearer ${session?.access_token || anonKey}`,
+    },
   });
 
   if (error) {
@@ -141,6 +144,9 @@ export async function createSubscriptionCheckout(
   // Get current session for auth
   const { data: { session } } = await supabase.auth.getSession();
   
+  // Anon key'i environment'tan al
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
   const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
     body: {
       plan: request.plan,
@@ -150,9 +156,9 @@ export async function createSubscriptionCheckout(
       cancelUrl: request.cancelUrl,
       userId: request.userId || session?.user?.id,
     },
-    headers: session?.access_token ? {
-      Authorization: `Bearer ${session.access_token}`,
-    } : undefined,
+    headers: {
+      Authorization: `Bearer ${session?.access_token || anonKey}`,
+    },
   });
 
   if (error) {
