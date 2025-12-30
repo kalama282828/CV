@@ -10,6 +10,7 @@ export function LandingPage() {
   const { settings } = useSiteSettings();
   const { profile } = useAuth();
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
   
   // Kullanıcının mevcut planı
   const currentPlan = profile?.plan || 'free';
@@ -21,12 +22,14 @@ export function LandingPage() {
       if (data) {
         setPricingPlans(data);
       }
+      setPricingLoaded(true);
     };
     loadPricingPlans();
   }, []);
 
   // Plana göre fiyat bilgisi al
   const getPlanPrice = (planId: string, type: 'monthly' | 'yearly' = 'monthly') => {
+    if (!pricingLoaded) return '...';
     const plan = pricingPlans.find(p => p.id === planId);
     if (!plan) return type === 'monthly' ? settings.oneTimePrice : settings.oneTimePrice;
     return type === 'monthly' ? plan.monthly_price : plan.yearly_price;

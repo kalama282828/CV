@@ -11,9 +11,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Stripe'da tanımlı sabit Price ID'leri (Live mode)
+const STRIPE_PRICE_IDS = {
+  pro: 'price_1SjOALFguK3gL9VbN74aDofF',
+  business: 'price_1SjOAvFguK3gL9VbREFzFvac',
+};
+
 interface RequestBody {
   plan: 'pro' | 'business';
-  priceAmount: number; // Aylık fiyat (kuruş cinsinden)
+  priceAmount?: number; // Artık opsiyonel - Stripe'dan fiyat alınacak
   userEmail?: string;
   successUrl: string;
   cancelUrl: string;
@@ -46,15 +52,12 @@ serve(async (req: Request) => {
 
     // Parse request body
     const body: RequestBody = await req.json();
-    const { plan, priceAmount, userEmail, successUrl, cancelUrl, userId } = body;
-    console.log('Request body:', { plan, priceAmount, userEmail, successUrl, cancelUrl, userId });
+    const { plan, userEmail, successUrl, cancelUrl, userId } = body;
+    console.log('Request body:', { plan, userEmail, successUrl, cancelUrl, userId });
 
     // Validate required fields
     if (!plan || !['pro', 'business'].includes(plan)) {
       throw new Error('Invalid plan. Must be "pro" or "business"');
-    }
-    if (!priceAmount || priceAmount <= 0) {
-      throw new Error('Invalid price amount');
     }
     if (!successUrl || !cancelUrl) {
       throw new Error('Success and cancel URLs are required');
@@ -64,39 +67,18 @@ serve(async (req: Request) => {
     const validEmail = userEmail && userEmail.includes('@') ? userEmail : undefined;
     console.log('Valid email:', validEmail);
 
-    // Plan bilgileri
-    const planDetails = {
-      pro: {
-        name: 'CV Builder Pro',
-        description: 'Sınırsız CV, Premium şablonlar, Öncelikli destek',
-      },
-      business: {
-        name: 'CV Builder İşletme',
-        description: 'Tüm Pro özellikleri + Takım yönetimi, API erişimi, 7/24 destek',
-      },
-    };
-
-    const selectedPlan = planDetails[plan];
+    // Stripe'da tanımlı Price ID'yi al
+    const priceId = STRIPE_PRICE_IDS[plan];
+    console.log('Using Stripe Price ID:', priceId);
 
     // Create Stripe Checkout Session for Subscription
     console.log('Creating Stripe subscription checkout session...');
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
-      mode: 'subscription', // Abonelik modu
+      mode: 'subscription',
       line_items: [
         {
-          price_data: {
-            currency: 'try',
-            product_data: {
-              name: selectedPlan.name,
-              description: selectedPlan.description,
-            },
-            unit_amount: priceAmount,
-            recurring: {
-              interval: 'month', // Aylık abonelik
-              interval_count: 1,
-            },
-          },
+          price: priceId, // Stripe'da tanımlı sabit fiyat kullan
           quantity: 1,
         },
       ],
@@ -114,7 +96,7 @@ serve(async (req: Request) => {
           userId: userId || '',
         },
       },
-      // İlk ödemenin hemen alınmasını zorla - trial veya credit balance'ı bypass et
+      // İlk ödemenin hemen alınmasını zorla
       payment_method_collection: 'always',
     };
 
@@ -139,7 +121,7 @@ serve(async (req: Request) => {
         user_id: userId || null,
         plan,
         billing_cycle: 'monthly',
-        amount: priceAmount / 100, // TRY cinsinden
+        amount: session.amount_total ? session.amount_total / 100 : 0, // Stripe'dan gelen fiyat
         status: 'pending',
         start_date: new Date().toISOString(),
         end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 gün sonra
