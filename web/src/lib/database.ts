@@ -51,7 +51,7 @@ export interface Subscription {
   created_at: string;
   updated_at: string;
   // Joined fields
-  profiles?: Profile;
+  profiles?: { name: string | null; email: string } | null;
 }
 
 export interface Payment {
