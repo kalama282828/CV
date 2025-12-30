@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { useAuth } from '../context/AuthContext';
+import { pricingPlansService, type PricingPlan } from '../lib/database';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -17,15 +18,30 @@ export function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   
   // Seçilen plan (URL'den veya localStorage'dan)
   const selectedPlan = searchParams.get('plan') || localStorage.getItem('selected-plan');
 
-  // Plan bilgisini göster
+  // Fiyat planlarını veritabanından yükle
+  useEffect(() => {
+    const loadPricingPlans = async () => {
+      const { data } = await pricingPlansService.getAllPlans();
+      if (data) {
+        setPricingPlans(data);
+      }
+    };
+    loadPricingPlans();
+  }, []);
+
+  // Plan bilgisini göster - pricing_plans tablosundan çek
   const getPlanInfo = () => {
+    const proPlan = pricingPlans.find(p => p.id === 'pro');
+    const businessPlan = pricingPlans.find(p => p.id === 'business');
+    
     switch (selectedPlan) {
-      case 'pro': return { name: 'Pro Plan', price: settings.proMonthlyPrice };
-      case 'business': return { name: 'İşletme Plan', price: settings.businessMonthlyPrice };
+      case 'pro': return { name: 'Pro Plan', price: proPlan?.monthly_price || settings.proMonthlyPrice };
+      case 'business': return { name: 'İşletme Plan', price: businessPlan?.monthly_price || settings.businessMonthlyPrice };
       default: return null;
     }
   };
