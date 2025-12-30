@@ -173,6 +173,136 @@ serve(async (req: Request) => {
         break;
       }
 
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        
+        console.log('Subscription event:', event.type, subscription.id);
+        
+        // Get customer email from Stripe
+        let customerEmail = '';
+        let userId = subscription.metadata?.userId || null;
+        
+        if (subscription.customer) {
+          try {
+            const customer = await stripe.customers.retrieve(subscription.customer as string);
+            if (customer && !customer.deleted) {
+              customerEmail = (customer as Stripe.Customer).email || '';
+            }
+          } catch (e) {
+            console.error('Error fetching customer:', e);
+          }
+        }
+        
+        // Get plan info from subscription items
+        const item = subscription.items.data[0];
+        const priceId = item?.price?.id || '';
+        const amount = item?.price?.unit_amount || 0;
+        const interval = item?.price?.recurring?.interval || 'month';
+        
+        // Determine plan type from metadata or price
+        let plan: 'pro' | 'business' = 'pro';
+        if (subscription.metadata?.plan === 'business' || priceId.includes('business')) {
+          plan = 'business';
+        }
+        
+        // Map Stripe status to our status
+        let status: 'active' | 'cancelled' | 'expired' | 'pending' = 'pending';
+        if (subscription.status === 'active' || subscription.status === 'trialing') {
+          status = 'active';
+        } else if (subscription.status === 'canceled') {
+          status = 'cancelled';
+        } else if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+          status = 'expired';
+        }
+        
+        // Check if subscription already exists
+        const { data: existingSub } = await supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('stripe_subscription_id', subscription.id)
+          .maybeSingle();
+        
+        if (existingSub) {
+          // Update existing subscription
+          await supabase
+            .from('subscriptions')
+            .update({
+              status,
+              auto_renew: !subscription.cancel_at_period_end,
+              end_date: new Date(subscription.current_period_end * 1000).toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('stripe_subscription_id', subscription.id);
+        } else {
+          // Find user by email if userId not in metadata
+          if (!userId && customerEmail) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('email', customerEmail)
+              .maybeSingle();
+            
+            if (profile) {
+              userId = profile.id;
+            }
+          }
+          
+          // Create new subscription record
+          if (userId) {
+            await supabase
+              .from('subscriptions')
+              .insert({
+                user_id: userId,
+                plan,
+                billing_cycle: interval === 'year' ? 'yearly' : 'monthly',
+                amount: amount / 100, // Convert from cents to TL
+                status,
+                start_date: new Date(subscription.current_period_start * 1000).toISOString(),
+                end_date: new Date(subscription.current_period_end * 1000).toISOString(),
+                auto_renew: !subscription.cancel_at_period_end,
+                stripe_subscription_id: subscription.id,
+              });
+            
+            // Update user's plan
+            await supabase
+              .from('profiles')
+              .update({ plan, has_purchased: true })
+              .eq('id', userId);
+          }
+        }
+        
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        
+        console.log('Subscription deleted:', subscription.id);
+        
+        // Update subscription status to cancelled
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .update({
+            status: 'cancelled',
+            auto_renew: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_subscription_id', subscription.id)
+          .select('user_id')
+          .maybeSingle();
+        
+        // Downgrade user to free plan
+        if (subData?.user_id) {
+          await supabase
+            .from('profiles')
+            .update({ plan: 'free' })
+            .eq('id', subData.user_id);
+        }
+        
+        break;
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
