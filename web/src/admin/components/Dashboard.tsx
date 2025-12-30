@@ -1,8 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAdmin } from '../context/AdminContext';
 
 export function Dashboard() {
   const { dashboardStats, users, subscriptions, payments, loading, refreshAll } = useAdmin();
+
+  // Aktif gelir hesapla: aktif abonelikler + tamamlanmış ödemeler
+  const activeRevenue = useMemo(() => {
+    const subscriptionRevenue = subscriptions
+      .filter(s => s.status === 'active')
+      .reduce((sum, s) => sum + s.amount, 0);
+    
+    const paymentRevenue = payments
+      .filter(p => p.status === 'completed')
+      .reduce((sum, p) => sum + p.amount, 0);
+    
+    return subscriptionRevenue + paymentRevenue;
+  }, [subscriptions, payments]);
 
   useEffect(() => {
     refreshAll();
@@ -72,8 +85,8 @@ export function Dashboard() {
         <div className="stat-card purple">
           <div className="stat-icon">💰</div>
           <div className="stat-content">
-            <div className="stat-value">₺{dashboardStats.totalRevenue.toLocaleString()}</div>
-            <div className="stat-label">Toplam Gelir</div>
+            <div className="stat-value">₺{activeRevenue.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
+            <div className="stat-label">Aktif Gelir</div>
           </div>
         </div>
 
