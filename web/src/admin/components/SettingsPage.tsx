@@ -3,16 +3,16 @@ import { useSiteSettings, type SiteSettings } from '../../context/SiteSettingsCo
 
 
 const defaultSettings: SiteSettings = {
-  siteName: 'CV Builder',
+  siteName: 'CV Maker',
   siteDescription: 'Profesyonel CV oluşturma platformu',
   logoUrl: '',
   faviconUrl: '',
   primaryColor: '#135bec',
   secondaryColor: '#1e3a5f',
-  contactEmail: 'info@cvbuilder.com',
+  contactEmail: 'info@cvmaker.com',
   contactPhone: '+90 212 123 4567',
   socialLinks: { facebook: '', twitter: '', instagram: '', linkedin: '' },
-  footerText: '© 2024 CV Builder. Tüm hakları saklıdır.',
+  footerText: '© 2024 CV Maker. Tüm hakları saklıdır.',
   maintenanceMode: false,
   heroTitle: 'Dakikalar İçinde İş Kazandıran CV Oluşturun',
   heroSubtitle: 'ATS uyumlu CV oluşturucumuzla hayalinizdeki işe ulaşan binlerce profesyonele katılın.',
