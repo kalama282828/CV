@@ -99,28 +99,128 @@ export function LandingPage() {
 
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="bg-white dark:bg-gray-900 py-10 md:py-20">
+        <section className="bg-gradient-to-br from-[#f0f4ff] via-[#f8f6ff] to-[#fff9f0] dark:from-gray-900 dark:via-gray-900 dark:to-gray-900 py-12 md:py-20 overflow-hidden">
           <div className="px-4 md:px-10 lg:px-40 flex justify-center">
-            <div className="max-w-[960px] w-full">
+            <div className="max-w-[1100px] w-full">
               <div className="flex flex-col gap-10 lg:flex-row lg:items-center">
+                {/* Sol Taraf - Metin */}
                 <div className="flex flex-col gap-6 flex-1 text-left">
-                  <h1 className="text-[#111318] dark:text-white text-4xl font-black leading-tight md:text-5xl">{settings.heroTitle}</h1>
-                  <h2 className="text-[#616f89] dark:text-gray-400 text-lg">{settings.heroSubtitle}</h2>
-                  <div className="flex flex-wrap gap-4">
-                    <button onClick={handleGetStarted} className="flex min-w-[120px] items-center justify-center rounded-lg h-12 px-6 text-white font-bold shadow-lg" style={{ backgroundColor: settings.primaryColor }}>{settings.heroButtonText}</button>
-                    <button className="flex min-w-[120px] items-center justify-center rounded-lg h-12 px-6 border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white font-bold hover:bg-gray-50 dark:hover:bg-gray-800">{settings.heroSecondaryButtonText}</button>
+                  <h1 className="text-[#111318] dark:text-white text-4xl md:text-5xl lg:text-[56px] font-black leading-[1.1] tracking-tight">
+                    Dakikalar İçinde İş<br />
+                    <span className="italic" style={{ color: settings.primaryColor }}>Kazandıran</span> Sizi<br />
+                    Unutmayan CV<br />
+                    Oluşturun
+                  </h1>
+                  <p className="text-[#616f89] dark:text-gray-400 text-base md:text-lg max-w-[500px] leading-relaxed">
+                    {settings.heroSubtitle}
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-2">
+                    <button onClick={handleGetStarted} className="flex items-center justify-center rounded-xl h-12 px-8 text-white font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-[1.02]" style={{ backgroundColor: settings.primaryColor }}>
+                      {settings.heroButtonText}
+                    </button>
+                    <button className="flex items-center justify-center rounded-xl h-12 px-8 border-2 border-[#e0e4ea] dark:border-gray-700 text-[#111318] dark:text-white font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                      {settings.heroSecondaryButtonText}
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-[#616f89]">
+                  <div className="flex items-center gap-3 mt-4">
                     <div className="flex -space-x-2">
-                      <img alt="Kullanıcı" className="w-6 h-6 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk3rv6AZ5-VKKQN1ehUhyS0v6Y7AYcwJl9s6-Er79P77MnZLwaoKk09MpPmNngkmivXj7MvVpi_tHROIGAnXyj57v4cPJg-EeYdJ4-equ-jrYThKfapzuJHMxm9bGdcYNOhMqVJe8IBcCdWwNOeb28SUkBB-9hBd4r9PIMX3iz5OVFbwYrca1jDzv9byD8Oy8fQmcs0g1k4muUq_MOzduXFMvv0KR9dCaF9GLr2K8-DEMYm7QB1I-RLF87rLmvEkBHzijSrzyCNOh-" />
-                      <img alt="Kullanıcı" className="w-6 h-6 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEBY5JIQd9OqoKc4x-o3IhGrDBpmwfnVostY_Lr9inH5kNFat8m0BIF3rZ_zPqQXOX-b_BpbxBWMgIjmk1Oz5E0AgeBFBqTVl4yIsI0N-ZWulP2Mmv2be1dtY2hdG0fNLDnWjNOM0kIIW3CSdFVZ2UkYFrRWPuX_F9yeOFHQ2dhl8tnOdgkkUnFacPMOQxHE-clX4UnzdhvDCYf-nrewnVmgYQ0mxHZId8dVt-Bcrq91pmd5ES2ityNcChal9mqw0xgs-CvxYVua-g" />
-                      <img alt="Kullanıcı" className="w-6 h-6 rounded-full border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcqZzcE3WtGvdzQK-RnAxHuDZkZDPGIqCwBW18ad2Bv6EOJV2riUWVoJtxYUAbcteQLVwKliMALL-OZ3qr69nSAiOF71DKCmfJjI84Id81tFZPisfIxCbHnanrt-sDBXvXu84aMS_f0evMeWrq3hBvdN6ugi5NQVNcAeQEH4bhwVzt6uLD61bsoTkIwdtvMYHYeYKTBPW2Z79yez9FPp8jqVCIWNMvoJlKXtgM2ojme1CrXhiHNn--nT2VE2ZJnbZtj1qzot1NkSmt" />
+                      <img alt="Kullanıcı" className="w-8 h-8 rounded-full border-2 border-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk3rv6AZ5-VKKQN1ehUhyS0v6Y7AYcwJl9s6-Er79P77MnZLwaoKk09MpPmNngkmivXj7MvVpi_tHROIGAnXyj57v4cPJg-EeYdJ4-equ-jrYThKfapzuJHMxm9bGdcYNOhMqVJe8IBcCdWwNOeb28SUkBB-9hBd4r9PIMX3iz5OVFbwYrca1jDzv9byD8Oy8fQmcs0g1k4muUq_MOzduXFMvv0KR9dCaF9GLr2K8-DEMYm7QB1I-RLF87rLmvEkBHzijSrzyCNOh-" />
+                      <img alt="Kullanıcı" className="w-8 h-8 rounded-full border-2 border-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEBY5JIQd9OqoKc4x-o3IhGrDBpmwfnVostY_Lr9inH5kNFat8m0BIF3rZ_zPqQXOX-b_BpbxBWMgIjmk1Oz5E0AgeBFBqTVl4yIsI0N-ZWulP2Mmv2be1dtY2hdG0fNLDnWjNOM0kIIW3CSdFVZ2UkYFrRWPuX_F9yeOFHQ2dhl8tnOdgkkUnFacPMOQxHE-clX4UnzdhvDCYf-nrewnVmgYQ0mxHZId8dVt-Bcrq91pmd5ES2ityNcChal9mqw0xgs-CvxYVua-g" />
+                      <img alt="Kullanıcı" className="w-8 h-8 rounded-full border-2 border-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcqZzcE3WtGvdzQK-RnAxHuDZkZDPGIqCwBW18ad2Bv6EOJV2riUWVoJtxYUAbcteQLVwKliMALL-OZ3qr69nSAiOF71DKCmfJjI84Id81tFZPisfIxCbHnanrt-sDBXvXu84aMS_f0evMeWrq3hBvdN6ugi5NQVNcAeQEH4bhwVzt6uLD61bsoTkIwdtvMYHYeYKTBPW2Z79yez9FPp8jqVCIWNMvoJlKXtgM2ojme1CrXhiHNn--nT2VE2ZJnbZtj1qzot1NkSmt" />
                     </div>
-                    <span>{settings.heroTrustText}</span>
+                    <div className="flex items-center gap-1">
+                      <div className="flex text-yellow-400">
+                        {'★★★★★'.split('').map((star, i) => <span key={i} className="text-sm">{star}</span>)}
+                      </div>
+                      <span className="text-[#616f89] dark:text-gray-400 text-sm ml-1">{settings.heroTrustText}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="w-full flex-1">
-                  <div className="w-full bg-center bg-no-repeat bg-cover rounded-xl shadow-2xl aspect-[4/3] bg-gray-100 dark:bg-gray-800" style={{ backgroundImage: `url("${settings.heroImage}")` }}></div>
+
+                {/* Sağ Taraf - CV Önizleme Kartı */}
+                <div className="w-full flex-1 flex justify-center lg:justify-end">
+                  <div className="relative w-full max-w-[420px]">
+                    {/* macOS Pencere Stili CV Kartı */}
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                      {/* Pencere Başlığı */}
+                      <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                        <div className="w-3 h-3 rounded-full bg-[#ff5f57]"></div>
+                        <div className="w-3 h-3 rounded-full bg-[#febc2e]"></div>
+                        <div className="w-3 h-3 rounded-full bg-[#28c840]"></div>
+                      </div>
+                      
+                      {/* CV İçeriği */}
+                      <div className="p-5 relative">
+                        {/* ATS Skoru Badge */}
+                        <div className="absolute top-4 right-4 flex items-center gap-2 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded-full">
+                          <span className="material-symbols-outlined text-green-500 text-[18px]">verified</span>
+                          <div className="text-right">
+                            <div className="text-[10px] text-gray-500 dark:text-gray-400">ATS Skoru</div>
+                            <div className="text-sm font-bold text-green-600 dark:text-green-400">98/100</div>
+                          </div>
+                        </div>
+
+                        {/* Kişi Bilgileri */}
+                        <div className="mb-4">
+                          <h3 className="text-xl font-bold text-[#111318] dark:text-white">Emre Yılmaz</h3>
+                          <p className="text-sm text-[#616f89] dark:text-gray-400">Dijital Pazarlama Uzmanı</p>
+                        </div>
+
+                        {/* İki Sütunlu İçerik */}
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          {/* Sol Sütun */}
+                          <div>
+                            <div className="mb-3">
+                              <h4 className="font-bold text-[#111318] dark:text-white mb-1 text-[11px] uppercase tracking-wide">Eğitim</h4>
+                              <div className="text-[#616f89] dark:text-gray-400">
+                                <p className="font-medium text-[#111318] dark:text-white">İstanbul Bilgi Üniversitesi</p>
+                                <p>Reklamcılık Bölümü</p>
+                                <p className="text-[10px]">2012 - 2016</p>
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-[#111318] dark:text-white mb-1 text-[11px] uppercase tracking-wide">Sertifikalar</h4>
+                              <p className="text-[#616f89] dark:text-gray-400">Google Ads</p>
+                            </div>
+                          </div>
+
+                          {/* Sağ Sütun */}
+                          <div>
+                            <h4 className="font-bold text-[#111318] dark:text-white mb-1 text-[11px] uppercase tracking-wide">İş Deneyimi</h4>
+                            <div className="text-[#616f89] dark:text-gray-400 space-y-2">
+                              <div>
+                                <p className="font-medium text-[#111318] dark:text-white">Blue Fox Agency</p>
+                                <p className="text-[10px]">Stajyer & Uzman • 2016 - Present</p>
+                                <ul className="mt-1 space-y-0.5 text-[10px]">
+                                  <li>• Sosyal medya hesaplarının yönetimine destek</li>
+                                  <li>• Müşteriler için kreatif içeriklerin oluşturulması</li>
+                                </ul>
+                              </div>
+                              <div>
+                                <p className="font-medium text-[#111318] dark:text-white">Dijital Medya A.Ş.</p>
+                                <p className="text-[10px]">Junior Marketing Specialist • 2015 - 2016</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* PDF İndir Butonu */}
+                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                          <div className="flex items-center gap-2 text-[#616f89] dark:text-gray-400">
+                            <span className="material-symbols-outlined text-[18px]" style={{ color: settings.primaryColor }}>download</span>
+                            <div>
+                              <p className="text-[10px]">Hızlı İndir</p>
+                              <p className="font-semibold text-[#111318] dark:text-white text-xs">PDF Formatı</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dekoratif Elementler */}
+                    <div className="absolute -z-10 -top-4 -right-4 w-24 h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full blur-2xl"></div>
+                    <div className="absolute -z-10 -bottom-4 -left-4 w-32 h-32 bg-purple-100 dark:bg-purple-900/20 rounded-full blur-2xl"></div>
+                  </div>
                 </div>
               </div>
             </div>
