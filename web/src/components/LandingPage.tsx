@@ -31,7 +31,7 @@ export function LandingPage() {
   const getPlanPrice = (planId: string, type: 'monthly' | 'yearly' = 'monthly') => {
     if (!pricingLoaded) return '...';
     const plan = pricingPlans.find(p => p.id === planId);
-    if (!plan) return type === 'monthly' ? settings.oneTimePrice : settings.oneTimePrice;
+    if (!plan) return '...'; // Plan bulunamazsa da "..." göster
     return type === 'monthly' ? plan.monthly_price : plan.yearly_price;
   };
 

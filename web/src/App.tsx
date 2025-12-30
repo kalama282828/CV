@@ -12,7 +12,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { StripeTestBanner } from './components/StripeTestBanner';
 import { useSiteSettings } from './context/SiteSettingsContext';
 import { useAuth } from './context/AuthContext';
-import { stripePaymentsService, cvsService, profilesService, subscriptionsService } from './lib/database';
+import { stripePaymentsService, cvsService, profilesService, subscriptionsService, pricingPlansService, type PricingPlan } from './lib/database';
 import './App.css';
 
 const STORAGE_KEY = 'cv-generator-data';
@@ -117,6 +117,9 @@ function App() {
   const [userEmail, setUserEmail] = useState<string>('');
   const [paymentChecked, setPaymentChecked] = useState(false);
   
+  // Pricing state
+  const [oneTimePrice, setOneTimePrice] = useState<number | null>(null);
+  
   // CV database state
   const [currentCvId, setCurrentCvId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -125,6 +128,20 @@ function App() {
   
   // Debounce ref for auto-save
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fiyat planlarını yükle
+  useEffect(() => {
+    const loadPricing = async () => {
+      const { data } = await pricingPlansService.getAllPlans();
+      if (data) {
+        const oneTimePlan = data.find((p: PricingPlan) => p.id === 'one-time');
+        if (oneTimePlan) {
+          setOneTimePrice(oneTimePlan.monthly_price);
+        }
+      }
+    };
+    loadPricing();
+  }, []);
 
   // Kullanıcı giriş yaptığında CV'yi veritabanından yükle
   useEffect(() => {
@@ -400,7 +417,7 @@ function App() {
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onPaymentSuccess={handlePaymentSuccess}
-        price={settings.oneTimePrice}
+        price={oneTimePrice ?? 0}
         userEmail={userEmail || cvData.personalInfo.email}
         currentPlan={plan}
       />
@@ -461,7 +478,7 @@ function App() {
             style={{ opacity: !paymentChecked ? 0.6 : 1 }}
           >
             {!paymentChecked ? '⏳ Kontrol ediliyor...' : (
-              <>📄 PDF İndir {!canExportPDF && `(₺${settings.oneTimePrice})`}</>
+              <>📄 PDF İndir {!canExportPDF && oneTimePrice !== null && `(₺${oneTimePrice})`}</>
             )}
           </button>
           
