@@ -19,6 +19,7 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
   
   // Seçilen plan (URL'den veya localStorage'dan)
   const selectedPlan = searchParams.get('plan') || localStorage.getItem('selected-plan');
@@ -30,18 +31,21 @@ export function RegisterPage() {
       if (data) {
         setPricingPlans(data);
       }
+      setPricingLoaded(true);
     };
     loadPricingPlans();
   }, []);
 
   // Plan bilgisini göster - pricing_plans tablosundan çek
   const getPlanInfo = () => {
+    if (!pricingLoaded) return null; // Fiyatlar yüklenene kadar gösterme
+    
     const proPlan = pricingPlans.find(p => p.id === 'pro');
     const businessPlan = pricingPlans.find(p => p.id === 'business');
     
     switch (selectedPlan) {
-      case 'pro': return { name: 'Pro Plan', price: proPlan?.monthly_price || settings.proMonthlyPrice };
-      case 'business': return { name: 'İşletme Plan', price: businessPlan?.monthly_price || settings.businessMonthlyPrice };
+      case 'pro': return { name: 'Pro Plan', price: proPlan?.monthly_price ?? 0 };
+      case 'business': return { name: 'İşletme Plan', price: businessPlan?.monthly_price ?? 0 };
       default: return null;
     }
   };
