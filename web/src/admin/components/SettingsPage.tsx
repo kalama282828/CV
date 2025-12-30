@@ -147,13 +147,71 @@ export function SettingsPage() {
         {activeTab === 'general' && (
           <div className="settings-section">
             <h2>Genel Ayarlar</h2>
-            <div className="form-group">
-              <label>Site Adı</label>
-              <input type="text" value={settings.siteName} onChange={e => setSettings({ ...settings, siteName: e.target.value })} />
+            
+            {/* Site Kimliği */}
+            <div className="feature-card">
+              <h4>🏷️ Site Kimliği</h4>
+              <div className="form-group">
+                <label>Site Adı (Başlık)</label>
+                <input type="text" value={settings.siteName} onChange={e => setSettings({ ...settings, siteName: e.target.value })} placeholder="CV Maker" />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>Tarayıcı sekmesinde ve arama sonuçlarında görünür</small>
+              </div>
+              <div className="form-group">
+                <label>Site Açıklaması (Meta Description)</label>
+                <textarea value={settings.siteDescription} onChange={e => setSettings({ ...settings, siteDescription: e.target.value })} rows={3} placeholder="Profesyonel CV oluşturma platformu" />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>Google arama sonuçlarında görünür. 150-160 karakter önerilir. ({settings.siteDescription?.length || 0} karakter)</small>
+              </div>
             </div>
-            <div className="form-group">
-              <label>Site Açıklaması</label>
-              <textarea value={settings.siteDescription} onChange={e => setSettings({ ...settings, siteDescription: e.target.value })} rows={3} />
+
+            {/* SEO & Favicon */}
+            <div className="feature-card">
+              <h4>🔍 SEO & Favicon Ayarları</h4>
+              <div className="form-group">
+                <label>Favicon URL</label>
+                <input type="text" value={settings.faviconUrl} onChange={e => setSettings({ ...settings, faviconUrl: e.target.value })} placeholder="https://example.com/favicon.ico" />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>Tarayıcı sekmesinde görünen küçük ikon. .ico, .png veya .svg formatı önerilir.</small>
+                {settings.faviconUrl && (
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Önizleme:</span>
+                    <img src={settings.faviconUrl} alt="Favicon" style={{ width: '32px', height: '32px', objectFit: 'contain', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '2px' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
+                )}
+              </div>
+              <div className="form-group">
+                <label>Logo URL</label>
+                <input type="text" value={settings.logoUrl} onChange={e => setSettings({ ...settings, logoUrl: e.target.value })} placeholder="https://example.com/logo.png" />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>Header'da görünen logo. Şeffaf PNG önerilir.</small>
+                {settings.logoUrl && (
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Önizleme:</span>
+                    <img src={settings.logoUrl} alt="Logo" style={{ maxHeight: '40px', maxWidth: '150px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SEO Önizleme */}
+            <div className="feature-card">
+              <h4>👁️ Google Arama Önizlemesi</h4>
+              <div style={{ 
+                background: '#fff', 
+                border: '1px solid #e5e7eb', 
+                borderRadius: '8px', 
+                padding: '16px',
+                fontFamily: 'Arial, sans-serif'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  {settings.faviconUrl && <img src={settings.faviconUrl} alt="" style={{ width: '16px', height: '16px' }} />}
+                  <span style={{ color: '#202124', fontSize: '14px' }}>{window.location.origin}</span>
+                </div>
+                <div style={{ color: '#1a0dab', fontSize: '20px', fontWeight: 400, marginBottom: '4px', cursor: 'pointer' }}>
+                  {settings.siteName || 'Site Adı'} - Profesyonel CV Oluşturucu
+                </div>
+                <div style={{ color: '#4d5156', fontSize: '14px', lineHeight: '1.4' }}>
+                  {settings.siteDescription?.substring(0, 160) || 'Site açıklaması buraya gelecek...'}
+                  {(settings.siteDescription?.length || 0) > 160 && '...'}
+                </div>
+              </div>
             </div>
           </div>
         )}
