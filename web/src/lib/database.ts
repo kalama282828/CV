@@ -738,20 +738,20 @@ export const dashboardService = {
       .from('profiles')
       .select('*', { count: 'exact', head: true });
 
-    // Active subscriptions
+    // Active subscriptions - profiles tablosundan pro/business olanları say
     const { count: activeSubscriptions } = await supabase
-      .from('subscriptions')
+      .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'active');
+      .in('plan', ['pro', 'business']);
 
-    // Total revenue
+    // Total revenue - kuruştan TL'ye çevir
     const { data: revenueData } = await supabase
       .from('payments')
       .select('amount')
       .eq('status', 'completed');
-    const totalRevenue = revenueData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    const totalRevenue = revenueData?.reduce((sum, p) => sum + Number(p.amount) / 100, 0) || 0;
 
-    // Monthly revenue (current month)
+    // Monthly revenue (current month) - kuruştan TL'ye çevir
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -761,7 +761,7 @@ export const dashboardService = {
       .select('amount')
       .eq('status', 'completed')
       .gte('created_at', startOfMonth.toISOString());
-    const monthlyRevenue = monthlyData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    const monthlyRevenue = monthlyData?.reduce((sum, p) => sum + Number(p.amount) / 100, 0) || 0;
 
     // New users today
     const today = new Date();
