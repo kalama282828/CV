@@ -348,8 +348,7 @@ export const paymentsService = {
   },
 
   async getAllPayments() {
-    // payments tablosu profiles ile foreign key ilişkisi olmadığı için
-    // önce payments'ı çek, sonra user bilgilerini ayrı çek
+    // payments tablosundan tüm ödemeleri çek
     const { data: payments, error } = await supabase
       .from('payments')
       .select('*')
@@ -378,13 +377,25 @@ export const paymentsService = {
       }
     }
 
-    // Payments'a profile bilgilerini ekle
-    const paymentsWithProfiles = payments.map(payment => ({
-      ...payment,
-      profiles: payment.user_id && profilesMap[payment.user_id] 
-        ? profilesMap[payment.user_id] 
-        : null,
-    }));
+    // Payments'a profile bilgilerini ekle ve formatla
+    const paymentsWithProfiles = payments.map(payment => {
+      const profile = payment.user_id && profilesMap[payment.user_id];
+      return {
+        id: payment.id,
+        user_id: payment.user_id,
+        subscription_id: null,
+        type: (payment.metadata as Record<string, unknown>)?.type === 'subscription' ? 'subscription' : 'one-time' as 'subscription' | 'one-time',
+        amount: payment.amount / 100, // Kuruştan TL'ye çevir
+        currency: payment.currency || 'try',
+        status: payment.status,
+        method: 'stripe' as const,
+        stripe_payment_id: payment.stripe_payment_intent,
+        description: null,
+        created_at: payment.created_at,
+        updated_at: payment.updated_at,
+        profiles: profile || { name: null, email: payment.email },
+      };
+    });
 
     return { data: paymentsWithProfiles as Payment[], error: null };
   },

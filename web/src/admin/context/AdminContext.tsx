@@ -410,11 +410,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         userId: payment.user_id,
         userName: payment.profiles?.name || 'Misafir',
         userEmail: payment.profiles?.email || 'Bilinmiyor',
-        type: payment.type,
+        type: payment.type || 'one-time',
         amount: payment.amount,
         status: payment.status,
         date: payment.created_at.split('T')[0],
-        method: payment.method,
+        method: payment.method || 'stripe',
         stripePaymentId: payment.stripe_payment_id,
       }));
       
