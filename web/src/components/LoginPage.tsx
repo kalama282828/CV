@@ -18,12 +18,14 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
 
   // Fiyat planlarını yükle
   useEffect(() => {
     const loadPricing = async () => {
       const { data } = await pricingPlansService.getAllPlans();
       if (data) setPricingPlans(data);
+      setPricingLoaded(true);
     };
     loadPricing();
   }, []);
@@ -31,8 +33,10 @@ export function LoginPage() {
   // Seçilen plan (URL'den veya localStorage'dan)
   const selectedPlan = searchParams.get('plan') || localStorage.getItem('selected-plan');
 
-  // Plan bilgisini göster - önce pricing_plans tablosundan, yoksa settings'den
+  // Plan bilgisini göster - pricing_plans tablosundan çek
   const getPlanInfo = (): { name: string; price: number; isSubscription: boolean; subscriptionPlan?: SubscriptionPlan } | null => {
+    if (!pricingLoaded) return null; // Fiyatlar yüklenene kadar gösterme
+    
     const proPlan = pricingPlans.find(p => p.id === 'pro');
     const businessPlan = pricingPlans.find(p => p.id === 'business');
     
@@ -40,14 +44,14 @@ export function LoginPage() {
       case 'pro': 
         return { 
           name: 'Pro Plan', 
-          price: proPlan?.monthly_price || settings.proMonthlyPrice || 99.99, 
+          price: proPlan?.monthly_price ?? 0, 
           isSubscription: true, 
           subscriptionPlan: 'pro' 
         };
       case 'business': 
         return { 
           name: 'İşletme Plan', 
-          price: businessPlan?.monthly_price || settings.businessMonthlyPrice || 249.99, 
+          price: businessPlan?.monthly_price ?? 0, 
           isSubscription: true, 
           subscriptionPlan: 'business' 
         };
