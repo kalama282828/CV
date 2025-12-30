@@ -271,19 +271,47 @@ export const subscriptionsService = {
   },
 
   async getAllSubscriptions() {
-    // subscriptions tablosu profiles ile join için ayrı sorgu gerekiyor
-    const { data: subscriptions, error } = await supabase
+    // Önce subscriptions tablosundan çek
+    const { data: subscriptions, error: subError } = await supabase
       .from('subscriptions')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error || !subscriptions) {
-      return { data: null, error };
+    // Ayrıca profiles tablosundan pro/business planı olanları çek
+    const { data: paidProfiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('plan', ['pro', 'business'])
+      .order('created_at', { ascending: false });
+    
+    if (subError && profileError) {
+      return { data: null, error: subError };
     }
 
-    // User ID'leri topla ve profiles'dan bilgileri çek
-    const userIds = [...new Set(subscriptions.map(s => s.user_id))];
+    // Subscriptions tablosundaki user_id'leri topla
+    const existingSubUserIds = new Set((subscriptions || []).map(s => s.user_id));
     
+    // Profiles'dan gelen verileri subscription formatına çevir
+    const profileSubscriptions: Subscription[] = (paidProfiles || [])
+      .filter(p => !existingSubUserIds.has(p.id)) // Zaten subscriptions'da olanları atla
+      .map(profile => ({
+        id: `profile-${profile.id}`,
+        user_id: profile.id,
+        plan: profile.plan as 'pro' | 'business',
+        billing_cycle: 'monthly' as const,
+        amount: profile.plan === 'pro' ? 99.99 : 249.99,
+        status: 'active' as const,
+        start_date: profile.created_at,
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        auto_renew: true,
+        stripe_subscription_id: null,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+        profiles: { name: profile.name, email: profile.email },
+      }));
+
+    // Subscriptions tablosundaki verilere profile bilgilerini ekle
+    const userIds = [...new Set((subscriptions || []).map(s => s.user_id))];
     let profilesMap: Record<string, { name: string | null; email: string }> = {};
     
     if (userIds.length > 0) {
@@ -300,13 +328,15 @@ export const subscriptionsService = {
       }
     }
 
-    // Subscriptions'a profile bilgilerini ekle
-    const subscriptionsWithProfiles = subscriptions.map(sub => ({
+    const subscriptionsWithProfiles = (subscriptions || []).map(sub => ({
       ...sub,
       profiles: profilesMap[sub.user_id] || null,
     }));
 
-    return { data: subscriptionsWithProfiles as Subscription[], error: null };
+    // İki kaynağı birleştir
+    const allSubscriptions = [...subscriptionsWithProfiles, ...profileSubscriptions];
+
+    return { data: allSubscriptions as Subscription[], error: null };
   },
 
   async createSubscription(subscriptionData: Omit<Subscription, 'id' | 'created_at' | 'updated_at'>) {
