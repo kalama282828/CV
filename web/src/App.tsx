@@ -759,6 +759,7 @@ function generatePDFHTML(data: CVData, template: TemplateName, lang: Language = 
       <div>${data.personalInfo.location}</div>
       <div>${data.personalInfo.phone}</div>
       <div>${data.personalInfo.email}</div>
+      ${data.personalInfo.militaryStatus ? `<div>${lang === 'tr' ? 'Askerlik' : 'Military'}: ${data.personalInfo.militaryStatus}</div>` : ''}
     </div>
   </div>
   
@@ -896,6 +897,7 @@ function generatePDFHTML(data: CVData, template: TemplateName, lang: Language = 
       <h1>${data.personalInfo.name || 'AD SOYAD'}</h1>
       <div class="job-title">${data.personalInfo.title || (lang === 'tr' ? 'UNVAN' : 'JOB TITLE')}</div>
       <p class="contact">${[data.personalInfo.location, data.personalInfo.phone, data.personalInfo.email].filter(Boolean).join(' | ') || 'Adres | Telefon | E-posta'}</p>
+      ${data.personalInfo.militaryStatus ? `<p class="contact" style="margin-top: 3pt;">${lang === 'tr' ? 'Askerlik Durumu' : 'Military Status'}: ${data.personalInfo.militaryStatus}</p>` : ''}
     </div>
     ${data.photo ? `<img class="photo" src="${data.photo}" />` : ''}
   </div>
