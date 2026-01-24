@@ -87,6 +87,20 @@ export function PersonalInfoForm({ data, summary, onChange }: Props) {
       </div>
 
       <div className="form-group">
+        <label>Askerlik Durumu</label>
+        <select
+          value={data.militaryStatus || ''}
+          onChange={(e) => handleChange('militaryStatus', e.target.value)}
+        >
+          <option value="">Seçiniz (opsiyonel)</option>
+          <option value="Tamamlandı">Tamamlandı</option>
+          <option value="Muaf">Muaf</option>
+          <option value="Tecilli">Tecilli</option>
+          <option value="Yapılmadı">Yapılmadı</option>
+        </select>
+      </div>
+
+      <div className="form-group">
         <label>Profesyonel Özet</label>
         <textarea
           value={summary || ''}

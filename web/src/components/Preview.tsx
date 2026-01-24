@@ -38,6 +38,11 @@ function ClassicTemplate({ data, language }: { data: CVData; language: Language 
             <p style={{ fontSize: 10, color: '#555', margin: 0 }}>
               {[data.personalInfo.location, data.personalInfo.phone, data.personalInfo.email].filter(Boolean).join(' | ') || 'İletişim bilgileri'}
             </p>
+            {data.personalInfo.militaryStatus && (
+              <p style={{ fontSize: 10, color: '#555', margin: '4px 0 0 0' }}>
+                {language === 'tr' ? 'Askerlik Durumu' : 'Military Status'}: {data.personalInfo.militaryStatus}
+              </p>
+            )}
           </div>
           <PhotoBox photo={data.photo} />
         </div>
@@ -124,6 +129,7 @@ function ModernTemplate({ data, language }: { data: CVData; language: Language }
               <div>{data.personalInfo.phone}</div>
               <div>{data.personalInfo.email}</div>
               {data.personalInfo.linkedin && <div>{data.personalInfo.linkedin}</div>}
+              {data.personalInfo.militaryStatus && <div>{language === 'tr' ? 'Askerlik' : 'Military'}: {data.personalInfo.militaryStatus}</div>}
             </div>
           </div>
         </div>
@@ -237,6 +243,7 @@ function MinimalTemplate({ data, language }: { data: CVData; language: Language 
           <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>{data.personalInfo.title || 'Unvan'}</div>
           <div style={{ fontSize: 10, color: '#666', marginTop: 8 }}>
             {data.personalInfo.location} • {data.personalInfo.phone} • {data.personalInfo.email}
+            {data.personalInfo.militaryStatus && <span> • {language === 'tr' ? 'Askerlik' : 'Military'}: {data.personalInfo.militaryStatus}</span>}
           </div>
         </div>
 
@@ -384,6 +391,7 @@ function PastelTemplate({ data, language }: { data: CVData; language: Language }
             <div>{data.personalInfo.phone}</div>
             <div>{data.personalInfo.email}</div>
             {data.personalInfo.linkedin && <div>{data.personalInfo.linkedin}</div>}
+            {data.personalInfo.militaryStatus && <div>{language === 'tr' ? 'Askerlik' : 'Military'}: {data.personalInfo.militaryStatus}</div>}
           </div>
         </div>
 

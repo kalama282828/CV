@@ -7,6 +7,7 @@ export interface PersonalInfo {
   location: string;
   linkedin?: string;
   website?: string;
+  militaryStatus?: string; // Askerlik durumu (e.g., "Tamamlandı", "Muaf", "Tecilli")
 }
 
 export interface WorkExperience {
@@ -71,6 +72,7 @@ export const translations = {
     references: 'References',
     present: 'Present',
     graduated: 'Graduated with High Honors.',
+    militaryStatus: 'Military Status',
   },
   tr: {
     summary: 'ÖZET',
@@ -84,5 +86,6 @@ export const translations = {
     references: 'Referanslar',
     present: 'Devam Ediyor',
     graduated: 'Yüksek Onur Derecesiyle Mezun.',
+    militaryStatus: 'Askerlik Durumu',
   },
 } as const;
