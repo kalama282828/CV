@@ -356,11 +356,14 @@ function App() {
     if (printWindow) {
       printWindow.document.write(html);
       printWindow.document.close();
-      printWindow.onload = () => {
-        setTimeout(() => {
+      // document.write sonrası onload güvenilir değil, setTimeout kullan
+      setTimeout(() => {
+        try {
           printWindow.print();
-        }, 250);
-      };
+        } catch (e) {
+          console.error('Print error:', e);
+        }
+      }, 500);
     }
   };
 
