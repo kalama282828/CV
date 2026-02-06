@@ -352,31 +352,14 @@ function App() {
 
   const exportPDF = () => {
     const html = generatePDFHTML(cvData, template, language);
-    
-    // iframe yaklaşımı - popup blocker'dan etkilenmez
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
-    
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(html);
-      iframeDoc.close();
-      
-      iframe.onload = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.onload = () => {
         setTimeout(() => {
-          iframe.contentWindow?.print();
-          // Print dialog kapandıktan sonra iframe'i temizle
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-          }, 1000);
-        }, 500);
+          printWindow.print();
+        }, 250);
       };
     }
   };
